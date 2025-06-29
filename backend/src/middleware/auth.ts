@@ -47,7 +47,7 @@ export const authenticateUser = async (
     (req as AuthenticatedRequest).user = {
       id: user.id,
       email: user.email,
-      student_id: user.user_metadata?.student_id,
+      student_id: user.user_metadata?.['student_id'],
     };
 
     next();

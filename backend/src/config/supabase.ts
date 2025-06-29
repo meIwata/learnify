@@ -2,12 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 
 // Load environment-specific config
-const envFile = process.env.NODE_ENV === 'local' ? '.env.local' : '.env';
+const envFile = process.env['NODE_ENV'] === 'local' ? '.env.local' : '.env';
 dotenv.config({ path: envFile });
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env['SUPABASE_URL'];
+const supabaseAnonKey = process.env['SUPABASE_ANON_KEY'];
+const supabaseServiceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
 
 if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
   throw new Error(
@@ -31,7 +31,7 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 export const config = {
-  port: parseInt(process.env.PORT || '3000', 10),
-  nodeEnv: process.env.NODE_ENV || 'development',
+  port: parseInt(process.env['PORT'] || '3000', 10),
+  nodeEnv: process.env['NODE_ENV'] || 'development',
   isLocal: supabaseUrl?.includes('localhost'),
 };

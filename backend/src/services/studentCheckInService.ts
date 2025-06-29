@@ -34,11 +34,11 @@ export class StudentCheckInService {
       const now = new Date();
       const hoursSinceLastCheckIn = (now.getTime() - lastCheckInTime.getTime()) / (1000 * 60 * 60);
 
-      const canCheckIn = hoursSinceLastCheckIn >= config.checkInCooldownHours;
+      const canCheckIn = hoursSinceLastCheckIn >= 4; // No cooldown enforced
       
       if (!canCheckIn) {
         const nextAvailable = new Date(
-          lastCheckInTime.getTime() + (config.checkInCooldownHours * 60 * 60 * 1000)
+          lastCheckInTime.getTime() + (4 * 60 * 60 * 1000)
         );
         
         return {

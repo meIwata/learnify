@@ -2,10 +2,10 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
-import { checkInRouter } from './routes/checkIn';
-import { studentCheckInRouter } from './routes/studentCheckIn';
-import { simpleStudentCheckInRouter } from './routes/simpleStudentCheckIn';
-import { testCheckInRouter } from './routes/testCheckIn';
+// import { checkInRouter } from './routes/checkIn';
+// import { studentCheckInRouter } from './routes/studentCheckIn';
+// import { simpleStudentCheckInRouter } from './routes/simpleStudentCheckIn';
+// import { testCheckInRouter } from './routes/testCheckIn';
 import { autoCheckInRouter } from './routes/autoCheckIn';
 import { config } from './config/supabase';
 
@@ -17,7 +17,13 @@ const app = express();
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: [
+    process.env['FRONTEND_URL'] || 'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+    'https://496b-59-126-87-6.ngrok-free.app'
+  ],
   credentials: true
 }));
 
@@ -36,10 +42,10 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // API routes
-app.use('/api', checkInRouter);
-app.use('/api', studentCheckInRouter);
-app.use('/api', simpleStudentCheckInRouter);
-app.use('/api', testCheckInRouter);
+// app.use('/api', checkInRouter);
+// app.use('/api', studentCheckInRouter);
+// app.use('/api', simpleStudentCheckInRouter);
+// app.use('/api', testCheckInRouter);
 app.use('/api', autoCheckInRouter);
 
 // Root endpoint
@@ -77,7 +83,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Learnify Backend running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🔥 Environment: ${config.nodeEnv}`);
-  console.log(`⏰ Check-in cooldown: ${config.checkInCooldownHours} hours`);
 });
 
 export default app;
