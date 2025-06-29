@@ -1,0 +1,23 @@
+{
+  "name": "learnify-backend",
+  "type": "nodejs",
+  "framework": "express",
+  "buildCommand": "npm run build",
+  "startCommand": "npm start",
+  "installCommand": "npm install",
+  "nodeVersion": "18",
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "healthCheck": {
+    "path": "/health",
+    "timeout": 30
+  },
+  "domains": [],
+  "ports": [
+    {
+      "containerPort": 3000,
+      "protocol": "http"
+    }
+  ]
+}
