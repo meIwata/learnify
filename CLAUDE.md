@@ -22,26 +22,55 @@ FCU/
 
 - **macOS Client**: SwiftUI app in `Learnify/` directory using supabase-swift SDK
 - **Web Frontend**: Located in `frontend/` directory (currently empty)
-- **Authentication**: Supabase Auth with JWT tokens stored in Keychain
-- **Database**: Supabase PostgreSQL with Row Level Security (RLS)
+- **Authentication**: Student ID-based auto-registration (no JWT required for check-ins)
+- **Database**: Supabase PostgreSQL with simplified schema for auto-registration
 - **Storage**: Supabase Storage for file uploads (screenshots)
 - **Deployment**: Zeabur hosting platform
 
 ## Development Commands
+
+### Backend (Express.js + TypeScript)
+```bash
+cd backend
+
+# Local development with local Supabase
+npm run dev:local
+
+# Production development with remote Supabase  
+npm run dev
+
+# Supabase local management
+npm run supabase:start    # Start local Supabase stack
+npm run supabase:stop     # Stop local Supabase
+npm run supabase:reset    # Reset local database
+
+# Build and deployment
+npm run build            # Build TypeScript
+npm start               # Run production build
+npm run type-check      # TypeScript validation
+npm run lint            # Code linting
+```
 
 ### macOS App (Learnify/)
 - **Build**: Open `Learnify.xcodeproj` in Xcode and build (⌘+B)
 - **Run**: Run from Xcode (⌘+R) or use `xcodebuild` command line
 - **Test**: Run tests in Xcode (⌘+U)
 
+### Local Development URLs
+- **Backend API**: http://localhost:3000
+- **Supabase Studio**: http://localhost:54323 (Database admin UI)
+- **Health Check**: http://localhost:3000/health
+
 ### Current Implementation Status
-- macOS app uses SwiftData for local storage (basic template)
-- No Supabase integration yet implemented
-- Web frontend directory is empty
+- ✅ **Backend**: Complete check-in API with Supabase integration
+- ✅ **Local Dev**: Full local Supabase development stack
+- ✅ **Deployment**: Zeabur deployment configuration ready
+- 🔄 **macOS app**: Uses SwiftData for local storage (needs Supabase integration)
+- 📝 **Web frontend**: Directory structure created but empty
 
 ## Key Features
 
-1. **Authentication**: Student ID-based registration and login
+1. **Auto-Registration**: Student ID-based check-ins with automatic student creation
 2. **Gamification**: Daily check-ins, points system, leaderboards
 3. **Submissions**: Screenshot uploads and GitHub repository linking
 4. **Quizzes**: Multiple-choice quizzes with automatic grading
@@ -51,19 +80,34 @@ FCU/
 ## Data Models
 
 Core entities include:
-- `users/profiles` - Student and instructor data
-- `check_ins` - Daily engagement tracking
+- `students` - Student data with auto-registration support
+- `student_check_ins` - Daily engagement tracking without cooldown restrictions
 - `submissions` - Screenshots and GitHub links
 - `quizzes/questions/quiz_attempts` - Assessment system
 - `awards` - Recognition and badges
 
 ## Development Notes
 
+### Backend Development
+- **Framework**: Express.js with TypeScript for type safety
+- **Database**: Supabase PostgreSQL with simplified schema (no auth.users dependency)
+- **Authentication**: Student ID-based auto-registration (no JWT required)
+- **Local Development**: Use `npm run dev:local` with local Supabase instance
+- **Production**: Use `npm run dev` with remote Supabase cloud (loads `.env`)
+- **API Testing**: Use Supabase Studio at http://localhost:54323 for database inspection
+- **Migrations**: Database schema managed through Supabase migrations
+
+### macOS App Development
 - Use `supabase-swift` library for all backend interactions
-- Store JWT tokens securely in macOS Keychain
-- Implement RLS policies for data security
-- Support multi-device authentication
+- Student ID-based check-ins (no authentication tokens required)
 - Follow SwiftUI best practices for macOS apps
+- Integrate with auto-registration API endpoints
+
+### Available Documentation
+- **LOCAL_DEVELOPMENT.md**: Complete local development setup guide
+- **DEPLOYMENT.md**: Production deployment steps for Supabase + Zeabur
+- **API_DESIGN.md**: API endpoints and request/response formats
+- **TASKS.md**: Current development progress tracking
 
 ## User Roles
 
