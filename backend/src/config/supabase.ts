@@ -31,7 +31,6 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 export const config = {
-  checkInCooldownHours: parseInt(process.env.CHECK_IN_COOLDOWN_HOURS || '4', 10),
   port: parseInt(process.env.PORT || '3000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   isLocal: supabaseUrl?.includes('localhost'),

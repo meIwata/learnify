@@ -121,7 +121,6 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-key
 # Server Configuration
 PORT=3000
 NODE_ENV=local  # Use 'local' for local Supabase
-CHECK_IN_COOLDOWN_HOURS=4  # Currently not enforced
 ```
 
 ### Environment Files

@@ -87,7 +87,6 @@ SUPABASE_ANON_KEY=your-anon-public-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 PORT=3000
 NODE_ENV=production
-CHECK_IN_COOLDOWN_HOURS=4
 ```
 
 **Important**: Replace the placeholder values with your actual Supabase cloud project credentials from Part 1, Step 3.

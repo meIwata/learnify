@@ -90,7 +90,6 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 # Server Configuration
 PORT=3000
 NODE_ENV=local
-CHECK_IN_COOLDOWN_HOURS=4
 ```
 
 **Note**: The `.env` file is configured for production with Supabase cloud. Always use `npm run dev:local` for local development.
