@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learnify - React Fundamentals Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-sans" x-data="quizApp()">
+    <!-- Navigation Header -->
+    <nav class="bg-white shadow-sm border-b border-gray-200 fixed w-full top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo & Back Button -->
+                <div class="flex items-center space-x-4">
+                    <button onclick="history.back()" class="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Back to Dashboard</span>
+                    </button>
+                    <div class="w-px h-6 bg-gray-300"></div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-graduation-cap text-white text-sm"></i>
+                        </div>
+                        <h1 class="text-xl font-bold text-gray-900">Learnify</h1>
+                    </div>
+                </div>
+
+                <!-- Quiz Progress -->
+                <div class="hidden md:flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-clock text-gray-600"></i>
+                        <span class="text-sm font-medium text-gray-900" x-text="timeRemaining"></span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-600">Question</span>
+                        <span class="text-sm font-medium text-gray-900" x-text="currentQuestion + 1"></span>
+                        <span class="text-sm text-gray-600">of</span>
+                        <span class="text-sm font-medium text-gray-900" x-text="totalQuestions"></span>
+                    </div>
+                </div>
+
+                <!-- User Profile -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center">
+                        <span class="text-white text-sm font-medium">A</span>
+                    </div>
+                    <div class="hidden md:block">
+                        <p class="text-sm font-medium text-gray-900">Alex Johnson</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="pt-16 min-h-screen">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            
+            <!-- Quiz Header -->
+            <div class="mb-8">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-900">React Fundamentals Quiz</h2>
+                            <p class="text-gray-600">Test your knowledge of React basics</p>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <div class="text-center">
+                                <p class="text-2xl font-bold text-blue-600" x-text="timeRemaining"></p>
+                                <p class="text-sm text-gray-600">Time Left</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm text-gray-600">Progress</span>
+                            <span class="text-sm font-medium text-gray-900" x-text="Math.round(((currentQuestion + 1) / totalQuestions) * 100) + '%'"></span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" :style="`width: ${((currentQuestion + 1) / totalQuestions) * 100}%`"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quiz Question -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
+                <div class="p-8">
+                    <!-- Question -->
+                    <div class="mb-8">
+                        <div class="flex items-start space-x-4">
+                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-blue-600 font-bold" x-text="currentQuestion + 1"></span>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-xl font-semibold text-gray-900 mb-4" x-text="questions[currentQuestion].question"></h3>
+                                
+                                <!-- Code block if present -->
+                                <div x-show="questions[currentQuestion].code" class="bg-gray-900 rounded-lg p-4 mb-6 overflow-x-auto">
+                                    <pre class="text-green-400 text-sm"><code x-text="questions[currentQuestion].code"></code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Answer Options -->
+                    <div class="space-y-4">
+                        <template x-for="(option, index) in questions[currentQuestion].options" :key="index">
+                            <button 
+                                @click="selectAnswer(index)"
+                                :class="{
+                                    'border-blue-500 bg-blue-50': selectedAnswer === index,
+                                    'border-gray-300 hover:border-gray-400': selectedAnswer !== index
+                                }"
+                                class="w-full text-left p-4 border-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
+                            >
+                                <div class="flex items-center space-x-4">
+                                    <div 
+                                        :class="{
+                                            'bg-blue-500 border-blue-500': selectedAnswer === index,
+                                            'border-gray-300': selectedAnswer !== index
+                                        }"
+                                        class="w-5 h-5 rounded-full border-2 flex items-center justify-center"
+                                    >
+                                        <div x-show="selectedAnswer === index" class="w-2 h-2 bg-white rounded-full"></div>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center space-x-3">
+                                            <span 
+                                                :class="{
+                                                    'bg-blue-500 text-white': selectedAnswer === index,
+                                                    'bg-gray-100 text-gray-600': selectedAnswer !== index
+                                                }"
+                                                class="w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium"
+                                                x-text="String.fromCharCode(65 + index)"
+                                            ></span>
+                                            <span class="text-gray-900 font-medium" x-text="option"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Controls -->
+            <div class="flex justify-between items-center">
+                <button 
+                    @click="previousQuestion()"
+                    :disabled="currentQuestion === 0"
+                    :class="{
+                        'opacity-50 cursor-not-allowed': currentQuestion === 0,
+                        'hover:bg-gray-100': currentQuestion !== 0
+                    }"
+                    class="flex items-center space-x-2 px-6 py-3 border border-gray-300 rounded-lg transition-colors"
+                >
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Previous</span>
+                </button>
+
+                <div class="flex items-center space-x-4">
+                    <!-- Question indicators -->
+                    <div class="hidden md:flex items-center space-x-2">
+                        <template x-for="(question, index) in questions" :key="index">
+                            <button 
+                                @click="goToQuestion(index)"
+                                :class="{
+                                    'bg-blue-500 text-white': index === currentQuestion,
+                                    'bg-green-500 text-white': answers[index] !== null && index !== currentQuestion,
+                                    'bg-gray-200 text-gray-600': answers[index] === null && index !== currentQuestion
+                                }"
+                                class="w-8 h-8 rounded-full text-sm font-medium transition-colors hover:opacity-80"
+                                x-text="index + 1"
+                            ></button>
+                        </template>
+                    </div>
+
+                    <button 
+                        @click="nextQuestion()"
+                        :disabled="selectedAnswer === null"
+                        :class="{
+                            'opacity-50 cursor-not-allowed': selectedAnswer === null,
+                            'hover:bg-blue-700': selectedAnswer !== null
+                        }"
+                        class="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg transition-colors"
+                    >
+                        <span x-text="currentQuestion === totalQuestions - 1 ? 'Submit Quiz' : 'Next'"></span>
+                        <i class="fas fa-arrow-right" x-show="currentQuestion !== totalQuestions - 1"></i>
+                        <i class="fas fa-check" x-show="currentQuestion === totalQuestions - 1"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Question Indicators -->
+            <div class="md:hidden mt-6 bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                <h4 class="text-sm font-medium text-gray-900 mb-3">Question Progress</h4>
+                <div class="grid grid-cols-5 gap-2">
+                    <template x-for="(question, index) in questions" :key="index">
+                        <button 
+                            @click="goToQuestion(index)"
+                            :class="{
+                                'bg-blue-500 text-white': index === currentQuestion,
+                                'bg-green-500 text-white': answers[index] !== null && index !== currentQuestion,
+                                'bg-gray-200 text-gray-600': answers[index] === null && index !== currentQuestion
+                            }"
+                            class="aspect-square rounded-lg text-sm font-medium transition-colors hover:opacity-80"
+                            x-text="index + 1"
+                        ></button>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Quiz Completion Modal -->
+    <div x-show="showResults" x-cloak class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full p-8 text-center">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-trophy text-green-600 text-2xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">Quiz Completed!</h3>
+            <p class="text-gray-600 mb-6">Great job! Here are your results:</p>
+            
+            <div class="bg-gray-50 rounded-lg p-6 mb-6">
+                <div class="text-center">
+                    <p class="text-3xl font-bold text-blue-600 mb-2" x-text="score + '%'"></p>
+                    <p class="text-gray-600">Your Score</p>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mt-4">
+                    <div class="text-center">
+                        <p class="text-lg font-semibold text-gray-900" x-text="correctAnswers"></p>
+                        <p class="text-sm text-gray-600">Correct</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-lg font-semibold text-gray-900" x-text="totalQuestions - correctAnswers"></p>
+                        <p class="text-sm text-gray-600">Incorrect</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <button 
+                    @click="reviewAnswers()"
+                    class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                    Review Answers
+                </button>
+                <button 
+                    @click="returnToDashboard()"
+                    class="w-full bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                >
+                    Return to Dashboard
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function quizApp() {
+            return {
+                currentQuestion: 0,
+                selectedAnswer: null,
+                answers: [],
+                timeRemaining: '25:00',
+                showResults: false,
+                score: 0,
+                correctAnswers: 0,
+                totalQuestions: 0,
+                
+                questions: [
+                    {
+                        question: "What is the correct way to create a React component?",
+                        options: [
+                            "function MyComponent() { return <div>Hello</div>; }",
+                            "const MyComponent = () => { return <div>Hello</div>; }",
+                            "class MyComponent extends React.Component { render() { return <div>Hello</div>; } }",
+                            "All of the above"
+                        ],
+                        correct: 3
+                    },
+                    {
+                        question: "What is JSX?",
+                        options: [
+                            "A JavaScript library",
+                            "A syntax extension for JavaScript",
+                            "A CSS framework",
+                            "A database query language"
+                        ],
+                        correct: 1
+                    },
+                    {
+                        question: "How do you pass data to a React component?",
+                        options: [
+                            "Through props",
+                            "Through state",
+                            "Through context",
+                            "Through refs"
+                        ],
+                        correct: 0
+                    },
+                    {
+                        question: "What hook is used to manage state in functional components?",
+                        code: "import React, { ??? } from 'react';\n\nfunction Counter() {\n  const [count, setCount] = ???(0);\n  return <div>{count}</div>;\n}",
+                        options: [
+                            "useEffect",
+                            "useState",
+                            "useContext",
+                            "useReducer"
+                        ],
+                        correct: 1
+                    },
+                    {
+                        question: "What is the virtual DOM?",
+                        options: [
+                            "A copy of the real DOM kept in memory",
+                            "A new HTML standard",
+                            "A CSS framework",
+                            "A JavaScript library"
+                        ],
+                        correct: 0
+                    }
+                ],
+                
+                init() {
+                    this.totalQuestions = this.questions.length;
+                    this.answers = new Array(this.totalQuestions).fill(null);
+                    this.startTimer();
+                },
+                
+                selectAnswer(index) {
+                    this.selectedAnswer = index;
+                },
+                
+                nextQuestion() {
+                    if (this.selectedAnswer !== null) {
+                        this.answers[this.currentQuestion] = this.selectedAnswer;
+                        
+                        if (this.currentQuestion === this.totalQuestions - 1) {
+                            this.submitQuiz();
+                        } else {
+                            this.currentQuestion++;
+                            this.selectedAnswer = this.answers[this.currentQuestion];
+                        }
+                    }
+                },
+                
+                previousQuestion() {
+                    if (this.currentQuestion > 0) {
+                        this.answers[this.currentQuestion] = this.selectedAnswer;
+                        this.currentQuestion--;
+                        this.selectedAnswer = this.answers[this.currentQuestion];
+                    }
+                },
+                
+                goToQuestion(index) {
+                    this.answers[this.currentQuestion] = this.selectedAnswer;
+                    this.currentQuestion = index;
+                    this.selectedAnswer = this.answers[this.currentQuestion];
+                },
+                
+                submitQuiz() {
+                    this.answers[this.currentQuestion] = this.selectedAnswer;
+                    this.calculateScore();
+                    this.showResults = true;
+                },
+                
+                calculateScore() {
+                    this.correctAnswers = 0;
+                    for (let i = 0; i < this.questions.length; i++) {
+                        if (this.answers[i] === this.questions[i].correct) {
+                            this.correctAnswers++;
+                        }
+                    }
+                    this.score = Math.round((this.correctAnswers / this.totalQuestions) * 100);
+                },
+                
+                reviewAnswers() {
+                    this.showResults = false;
+                    // Implementation for review mode would go here
+                    alert('Review mode would show correct/incorrect answers');
+                },
+                
+                returnToDashboard() {
+                    window.location.href = 'index.html';
+                },
+                
+                startTimer() {
+                    let minutes = 25;
+                    let seconds = 0;
+                    
+                    const timer = setInterval(() => {
+                        if (seconds === 0) {
+                            if (minutes === 0) {
+                                clearInterval(timer);
+                                this.submitQuiz();
+                                return;
+                            }
+                            minutes--;
+                            seconds = 59;
+                        } else {
+                            seconds--;
+                        }
+                        
+                        this.timeRemaining = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    }, 1000);
+                }
+            }
+        }
+    </script>
+
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+</body>
+</html> 
