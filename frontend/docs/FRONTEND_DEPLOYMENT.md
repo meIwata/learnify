@@ -125,7 +125,106 @@ Create `frontend/public/_redirects`:
 /*    /index.html   200
 ```
 
-### Option 3: Traditional Web Server
+### Option 3: Zeabur (Recommended for Backend Integration)
+
+Zeabur provides seamless deployment for full-stack applications with automatic backend integration.
+
+#### Prerequisites
+
+1. **Backend deployed on Zeabur**: Ensure your backend is already deployed and note the URL
+2. **GitHub repository**: Code must be in a GitHub repository
+3. **Zeabur account**: Sign up at [zeabur.com](https://zeabur.com)
+
+#### Deployment Steps
+
+1. **Connect GitHub Repository**
+   - Go to [Zeabur Dashboard](https://dash.zeabur.com)
+   - Click "New Project" 
+   - Connect your GitHub account
+   - Select the `learnify` repository
+
+2. **Configure Frontend Service**
+   - Click "Add Service" → "Git Repository"
+   - Select your repository and choose the `frontend` folder as root directory
+   - Zeabur will auto-detect it as a Node.js project
+
+3. **Configure Environment Variables**
+   ```bash
+   VITE_API_URL=https://your-backend-service.zeabur.app
+   ```
+   - Replace `your-backend-service` with your actual backend service name
+   - Find backend URL in Zeabur dashboard under your backend service
+
+4. **Build Configuration**
+   Zeabur automatically detects Vite projects, but you can customize:
+   - **Build Command**: `npm run build` (auto-detected)
+   - **Output Directory**: `dist` (auto-detected)
+   - **Install Command**: `npm install` (auto-detected)
+
+#### Zeabur Configuration File (Optional)
+
+Create `frontend/zbpack.json` for custom configuration:
+
+```json
+{
+  "build_command": "npm run build",
+  "install_command": "npm install",
+  "output_dir": "dist",
+  "env": {
+    "NODE_VERSION": "18"
+  }
+}
+```
+
+#### Custom Domain Setup
+
+1. In Zeabur dashboard, go to your frontend service
+2. Click "Domains" tab
+3. Add custom domain or use provided `.zeabur.app` subdomain
+4. Update backend CORS settings to include new domain
+
+#### Backend Integration
+
+Update your backend's CORS configuration to allow the frontend domain:
+
+```typescript
+// In backend/src/index.ts
+app.use(cors({
+  origin: [
+    'https://your-frontend-service.zeabur.app',
+    'http://localhost:5173', // for development
+    // ... other origins
+  ],
+  credentials: true
+}));
+```
+
+#### Environment Variables Management
+
+**Production (.env.production)**:
+```bash
+VITE_API_URL=https://your-backend-service.zeabur.app
+```
+
+**Development (.env.development)**:
+```bash
+VITE_API_URL=http://localhost:3000
+```
+
+#### Automatic Deployments
+
+- **Auto-deploy**: Enabled by default on `main` branch pushes
+- **Preview deployments**: Available for pull requests
+- **Build logs**: Accessible in Zeabur dashboard for debugging
+
+#### Monitoring and Logs
+
+1. **Build Logs**: Check for compilation errors
+2. **Runtime Logs**: Monitor application performance
+3. **Metrics**: View bandwidth and request statistics
+4. **Health Checks**: Automatic monitoring of service availability
+
+### Option 4: Traditional Web Server
 
 #### Apache
 
@@ -231,6 +330,14 @@ Configure these variables based on your deployment platform:
 | `VITE_API_URL` | Backend API base URL | `https://api.learnify.app` |
 
 ### Platform-Specific Configuration
+
+#### Zeabur
+1. Go to your service in Zeabur dashboard
+2. Click "Variables" tab
+3. Add environment variables:
+   - **Key**: `VITE_API_URL`
+   - **Value**: `https://your-backend-service.zeabur.app`
+4. Redeploy service for changes to take effect
 
 #### Vercel
 Set environment variables in project settings dashboard.

@@ -1,5 +1,4 @@
 
-import React from 'react';
 
 const WelcomeSection: React.FC = () => {
   return (

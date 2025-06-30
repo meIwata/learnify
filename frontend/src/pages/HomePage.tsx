@@ -1,4 +1,3 @@
-import React from 'react';
 import WelcomeSection from '../components/WelcomeSection';
 import QuickStats from '../components/QuickStats';
 import CurrentCourses from '../components/CurrentCourses';

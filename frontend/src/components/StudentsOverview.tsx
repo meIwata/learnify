@@ -186,7 +186,7 @@ const StudentsOverview: React.FC = () => {
                 </div>
               ) : checkIns.length > 0 ? (
                 <div className="max-h-96 overflow-y-auto space-y-3">
-                  {checkIns.map((checkIn, index) => (
+                  {checkIns.map((checkIn) => (
                     <div key={checkIn.id} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
                       <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                         <i className="fas fa-check text-green-600"></i>

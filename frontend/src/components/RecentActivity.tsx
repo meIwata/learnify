@@ -1,6 +1,5 @@
 
 
-import React from 'react';
 
 const RecentActivity: React.FC = () => {
   return (

@@ -1,6 +1,5 @@
 
 
-import React from 'react';
 
 const QuickStats: React.FC = () => {
   return (
