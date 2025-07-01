@@ -2,6 +2,9 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import http2 from 'http2';
+import fs from 'fs';
+import path from 'path';
 // import { checkInRouter } from './routes/checkIn';
 // import { studentCheckInRouter } from './routes/studentCheckIn';
 // import { simpleStudentCheckInRouter } from './routes/simpleStudentCheckIn';
@@ -17,15 +20,9 @@ const app = express();
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: [
-    process.env['FRONTEND_URL'] || 'http://localhost:3000',
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5175',
-    'https://496b-59-126-87-6.ngrok-free.app',
-    'https://learnify.zeabur.app'  // Actual frontend Zeabur URL
-  ],
-  credentials: true
+  origin: '*', // Allow all origins
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With']
 }));
 
 // Body parsing middleware
@@ -80,8 +77,9 @@ app.use((error: Error, req: Request, res: Response, next: Function) => {
 
 const PORT = config.port;
 
+// Start HTTP/1.1 server
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Learnify Backend running on port ${PORT}`);
+  console.log(`🚀 Learnify Backend (HTTP) running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🔥 Environment: ${config.nodeEnv}`);
 });
