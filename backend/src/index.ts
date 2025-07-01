@@ -31,11 +31,19 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
+  // Detect HTTP version
+  const httpVersion = req.httpVersion || 'unknown';
+  const isHTTP2 = httpVersion.startsWith('2');
+  
+  console.log(`🔍 Health check - HTTP version: ${httpVersion}, Is HTTP/2: ${isHTTP2}`);
+  
   res.status(200).json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     service: 'learnify-backend',
-    version: '1.0.0'
+    version: '1.0.0',
+    httpVersion: httpVersion,
+    isHTTP2: isHTTP2
   });
 });
 
