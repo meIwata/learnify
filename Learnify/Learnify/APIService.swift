@@ -11,8 +11,12 @@ final class APIService: NSObject, URLSessionTaskDelegate {
     static let shared = APIService()
     private override init() {}
     
+    #if DEBUG
+    private let baseURL = "http://localhost:3000"
+    #else
     private let baseURL = "https://learnify-api.zeabur.app"
-    
+    #endif
+
     // MARK: - Check-In
     func checkIn(studentId: String, fullName: String) async throws -> CheckInResponse {
         let url = URL(string: "\(baseURL)/api/auto/check-in")!
@@ -23,26 +27,69 @@ final class APIService: NSObject, URLSessionTaskDelegate {
         request.timeoutInterval = 30
         request.httpBody = try JSONEncoder().encode(CheckInRequest(student_id: studentId, full_name: fullName))
         
-        let session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
+        // Debug: Print platform and request info
+        #if targetEnvironment(simulator)
+        print("🔍 Running on iOS Simulator")
+        #else
+        print("🔍 Running on physical device")
+        #endif
+        
+        print("📤 Request URL: \(url.absoluteString)")
+        print("📤 Request headers: \(request.allHTTPHeaderFields ?? [:])")
+        
+        // Use different URLSession configuration for iOS simulator
+        let config: URLSessionConfiguration
+        #if targetEnvironment(simulator)
+        // iOS Simulator-specific configuration
+        config = URLSessionConfiguration.default
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.urlCache = nil
+        config.httpMaximumConnectionsPerHost = 1
+        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForResource = 60
+        print("🔧 Using iOS Simulator-optimized configuration")
+        #else
+        // Physical device configuration
+        config = URLSessionConfiguration.default
+        print("🔧 Using default configuration for physical device")
+        #endif
+        
+        let session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
         let maxRetries = 3
         var lastError: Error?
         
         for attempt in 1...maxRetries {
             do {
+                print("🔄 Attempt \(attempt)/\(maxRetries)")
                 let (data, response) = try await session.data(for: request)
+                
                 guard let httpResponse = response as? HTTPURLResponse else {
+                    print("❌ Invalid response type")
                     throw APIError.invalidResponse
                 }
+                
+                print("✅ HTTP Status: \(httpResponse.statusCode)")
+                print("📥 Response headers: \(httpResponse.allHeaderFields)")
+                
                 guard (200...299).contains(httpResponse.statusCode) else {
+                    print("❌ Server error: \(httpResponse.statusCode)")
                     throw APIError.serverError(httpResponse.statusCode)
                 }
+                
+                print("✅ Successful response received")
                 return try JSONDecoder().decode(CheckInResponse.self, from: data)
+                
             } catch let error as URLError where error.code == .networkConnectionLost && attempt < maxRetries {
-                print("⚠️ Network connection lost (Attempt \(attempt)/\(maxRetries)). Retrying in \(attempt)s...")
+                print("⚠️ Network connection lost (Attempt \(attempt)/\(maxRetries)). Error: \(error)")
+                print("⚠️ URLError details: code=\(error.code.rawValue), description=\(error.localizedDescription)")
                 lastError = error
                 try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
                 continue
             } catch {
+                print("❌ Request failed with error: \(error)")
+                if let urlError = error as? URLError {
+                    print("❌ URLError details: code=\(urlError.code.rawValue), description=\(urlError.localizedDescription)")
+                }
                 throw error
             }
         }
