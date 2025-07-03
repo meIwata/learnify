@@ -70,6 +70,132 @@ const StudentsOverview: React.FC = () => {
     return gradients[index % gradients.length];
   };
 
+  const formatDate = (dateString: string): string => {
+    try {
+      console.log('Formatting date:', dateString, 'Type:', typeof dateString);
+      
+      if (!dateString) {
+        return 'No date';
+      }
+      
+      // Handle PostgreSQL timestamp format with variable decimal precision
+      let date = new Date(dateString);
+      
+      if (isNaN(date.getTime())) {
+        // Manual parsing for PostgreSQL format with any number of decimal digits
+        const match = dateString.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})(?:\.(\d+))?\+00:00$/);
+        if (match) {
+          const [, datePart, timePart, ms = ''] = match;
+          let paddedMs = ms;
+          
+          if (ms) {
+            // Normalize milliseconds to exactly 3 digits
+            if (ms.length < 3) {
+              paddedMs = ms.padEnd(3, '0'); // Pad with zeros: .1 -> .100, .12 -> .120
+            } else if (ms.length > 3) {
+              paddedMs = ms.substring(0, 3); // Truncate: .123456 -> .123
+            }
+          } else {
+            paddedMs = '000'; // No milliseconds -> .000
+          }
+          
+          const isoString = `${datePart}T${timePart}.${paddedMs}Z`;
+          console.log('Manual parsing to ISO:', isoString);
+          date = new Date(isoString);
+        } else {
+          // Fallback: try simple replacements
+          const formats = [
+            dateString.replace(/\+00:00$/, 'Z'), // Replace +00:00 with Z
+            dateString.replace(/\.\d+\+00:00$/, 'Z'), // Remove any decimals and replace +00:00 with Z
+            dateString.replace(/\.\d+/, ''), // Remove decimals entirely
+          ];
+          
+          for (const format of formats) {
+            console.log('Trying fallback format:', format);
+            date = new Date(format);
+            if (!isNaN(date.getTime())) {
+              console.log('Successfully parsed with fallback format:', format);
+              break;
+            }
+          }
+        }
+        
+        if (isNaN(date.getTime())) {
+          console.warn('Could not parse date:', dateString);
+          return dateString; // Return original string if all parsing fails
+        }
+      }
+      
+      return date.toLocaleDateString();
+    } catch (error) {
+      console.error('Date parsing error:', error, 'Input:', dateString);
+      return dateString; // Return original string on error
+    }
+  };
+
+  const formatDateTime = (dateString: string): string => {
+    try {
+      console.log('Formatting datetime:', dateString, 'Type:', typeof dateString);
+      
+      if (!dateString) {
+        return 'No date time';
+      }
+      
+      // Handle PostgreSQL timestamp format with variable decimal precision
+      let date = new Date(dateString);
+      
+      if (isNaN(date.getTime())) {
+        // Manual parsing for PostgreSQL format with any number of decimal digits
+        const match = dateString.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})(?:\.(\d+))?\+00:00$/);
+        if (match) {
+          const [, datePart, timePart, ms = ''] = match;
+          let paddedMs = ms;
+          
+          if (ms) {
+            // Normalize milliseconds to exactly 3 digits
+            if (ms.length < 3) {
+              paddedMs = ms.padEnd(3, '0'); // Pad with zeros: .1 -> .100, .12 -> .120
+            } else if (ms.length > 3) {
+              paddedMs = ms.substring(0, 3); // Truncate: .123456 -> .123
+            }
+          } else {
+            paddedMs = '000'; // No milliseconds -> .000
+          }
+          
+          const isoString = `${datePart}T${timePart}.${paddedMs}Z`;
+          console.log('Manual parsing datetime to ISO:', isoString);
+          date = new Date(isoString);
+        } else {
+          // Fallback: try simple replacements
+          const formats = [
+            dateString.replace(/\+00:00$/, 'Z'), // Replace +00:00 with Z
+            dateString.replace(/\.\d+\+00:00$/, 'Z'), // Remove any decimals and replace +00:00 with Z
+            dateString.replace(/\.\d+/, ''), // Remove decimals entirely
+          ];
+          
+          for (const format of formats) {
+            console.log('Trying datetime fallback format:', format);
+            date = new Date(format);
+            if (!isNaN(date.getTime())) {
+              console.log('Successfully parsed datetime with fallback format:', format);
+              break;
+            }
+          }
+        }
+        
+        if (isNaN(date.getTime())) {
+          console.warn('Could not parse datetime:', dateString);
+          return dateString; // Return original string if all parsing fails
+        }
+      }
+      
+      return date.toLocaleString();
+    } catch (error) {
+      console.error('DateTime parsing error:', error, 'Input:', dateString);
+      return dateString; // Return original string on error
+    }
+  };
+
   const displayStudents = showAll ? students : students.slice(0, 8);
 
   if (loading) {
@@ -126,7 +252,7 @@ const StudentsOverview: React.FC = () => {
                 <div className="flex items-center space-x-1 mt-1">
                   <i className="fas fa-calendar text-blue-400 text-xs"></i>
                   <span className="text-xs text-gray-600">
-                    Joined {new Date(student.created_at).toLocaleDateString()}
+                    Joined {formatDate(student.created_at)}
                   </span>
                 </div>
               </div>
@@ -194,7 +320,7 @@ const StudentsOverview: React.FC = () => {
                       <div className="flex-1">
                         <p className="font-medium text-gray-900">Daily Check-in</p>
                         <p className="text-sm text-gray-600">
-                          {new Date(checkIn.checked_in_at).toLocaleString()}
+                          {formatDateTime(checkIn.created_at)}
                         </p>
                       </div>
                       <div className="text-right">

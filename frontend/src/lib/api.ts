@@ -34,7 +34,7 @@ export interface CheckInResponse {
 export interface StudentCheckIn {
   id: string;
   student_id: string;
-  checked_in_at: string;
+  created_at: string;
 }
 
 // API functions
