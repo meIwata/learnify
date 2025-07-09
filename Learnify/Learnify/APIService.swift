@@ -102,9 +102,148 @@ final class APIService: NSObject, URLSessionTaskDelegate {
             print("Protocol used: \(transaction.networkProtocolName ?? "unknown")")
         }
     }
+
+    // MARK: - Get All Students
+    func getAllStudents() async throws -> [Student] {
+        let url = URL(string: "\(baseURL)/api/auto/students")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        print("📤 Fetching students from: \(url.absoluteString)")
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        config.timeoutIntervalForResource = 60.0
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.httpMaximumConnectionsPerHost = 1
+        let session = URLSession(configuration: config)
+
+        let maxRetries = 3
+        var lastError: Error?
+
+        for attempt in 1...maxRetries {
+            do {
+                print("🔄 Students request attempt \(attempt)/\(maxRetries)")
+                let (data, response) = try await session.data(for: request)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    print("❌ Invalid response type for students")
+                    throw APIError.invalidResponse
+                }
+                
+                print("✅ Students HTTP Status: \(httpResponse.statusCode)")
+                
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    print("❌ Students server error: \(httpResponse.statusCode)")
+                    throw APIError.serverError(httpResponse.statusCode)
+                }
+                
+                // Parse the students response
+                let studentsResponse = try JSONDecoder().decode(StudentsResponse.self, from: data)
+                print("✅ Successfully fetched \(studentsResponse.data.students.count) students")
+                return studentsResponse.data.students
+                
+            } catch let error as URLError where error.code == .networkConnectionLost && attempt < maxRetries {
+                print("⚠️ Network connection lost fetching students (Attempt \(attempt)/\(maxRetries)). Error: \(error)")
+                lastError = error
+                try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                continue
+            } catch {
+                print("❌ Students request failed with error: \(error)")
+                throw error
+            }
+        }
+        throw lastError ?? APIError.networkError("Failed to fetch students after multiple retries.")
+    }
+    
+    // MARK: - Get Student Check-ins
+    func getStudentCheckIns(studentId: String) async throws -> [StudentCheckIn] {
+        let url = URL(string: "\(baseURL)/api/auto/check-ins/\(studentId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        print("📤 Fetching check-ins for student: \(studentId)")
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        config.timeoutIntervalForResource = 60.0
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.httpMaximumConnectionsPerHost = 1
+        let session = URLSession(configuration: config)
+
+        let maxRetries = 3
+        var lastError: Error?
+
+        for attempt in 1...maxRetries {
+            do {
+                print("🔄 Check-ins request attempt \(attempt)/\(maxRetries)")
+                let (data, response) = try await session.data(for: request)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    print("❌ Invalid response type for check-ins")
+                    throw APIError.invalidResponse
+                }
+                
+                print("✅ Check-ins HTTP Status: \(httpResponse.statusCode)")
+                
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    print("❌ Check-ins server error: \(httpResponse.statusCode)")
+                    throw APIError.serverError(httpResponse.statusCode)
+                }
+                
+                // Parse the check-ins response
+                let checkInsResponse = try JSONDecoder().decode(CheckInsResponse.self, from: data)
+                print("✅ Successfully fetched \(checkInsResponse.data.check_ins.count) check-ins")
+                return checkInsResponse.data.check_ins
+                
+            } catch let error as URLError where error.code == .networkConnectionLost && attempt < maxRetries {
+                print("⚠️ Network connection lost fetching check-ins (Attempt \(attempt)/\(maxRetries)). Error: \(error)")
+                lastError = error
+                try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                continue
+            } catch {
+                print("❌ Check-ins request failed with error: \(error)")
+                throw error
+            }
+        }
+        throw lastError ?? APIError.networkError("Failed to fetch check-ins after multiple retries.")
+    }
 }
 
 // MARK: - Data Models
+
+struct Student: Codable, Identifiable {
+    let id: String
+    let student_id: String
+    let full_name: String
+    let created_at: String
+}
+
+struct StudentsResponse: Codable {
+    let success: Bool
+    let data: StudentsData
+}
+
+struct StudentsData: Codable {
+    let students: [Student]
+    let total: Int
+}
+
+struct StudentCheckIn: Codable, Identifiable {
+    let id: Int
+    let created_at: String
+}
+
+struct CheckInsResponse: Codable {
+    let success: Bool
+    let data: CheckInsData
+}
+
+struct CheckInsData: Codable {
+    let check_ins: [StudentCheckIn]
+}
 
 struct CheckInRequest: Codable {
     let student_id: String

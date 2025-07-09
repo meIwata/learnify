@@ -9,7 +9,20 @@ import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        CheckInView()
+        TabView {
+            CheckInView()
+                .tabItem {
+                    Image(systemName: "checkmark.circle")
+                    Text("Check In")
+                }
+            
+            StudentsListView()
+                .tabItem {
+                    Image(systemName: "person.3")
+                    Text("Students")
+                }
+        }
+        .accentColor(.blue)
     }
 }
 
