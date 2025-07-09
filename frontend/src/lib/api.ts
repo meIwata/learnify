@@ -56,4 +56,81 @@ export const getStudentCheckIns = async (studentId: string): Promise<StudentChec
   return response.data.data.check_ins;
 };
 
+// Reflection interfaces
+export interface ReflectionRequest {
+  student_id: string;
+  mobile_app_name: string;
+  reflection_text: string;
+}
+
+export interface ReflectionResponse {
+  success: boolean;
+  data: {
+    reflection_id: number;
+    student_id: string;
+    student_name: string;
+    mobile_app_name: string;
+    reflection_text: string;
+    submitted_at: string;
+  };
+  message: string;
+}
+
+export interface StudentReflection {
+  id: number;
+  student_id: string;
+  mobile_app_name: string;
+  reflection_text: string;
+  created_at: string;
+  students?: {
+    full_name: string;
+  };
+}
+
+export interface ReflectionsResponse {
+  success: boolean;
+  data: {
+    reflections: StudentReflection[];
+    total_reflections: number;
+    showing: {
+      limit: number;
+      offset: number;
+      app_name_filter?: string;
+    };
+  };
+}
+
+export interface StudentReflectionsResponse {
+  success: boolean;
+  data: {
+    student: {
+      student_id: string;
+      full_name: string;
+      uuid: string;
+    };
+    reflections: StudentReflection[];
+    total_reflections: number;
+    showing: {
+      limit: number;
+      offset: number;
+    };
+  };
+}
+
+// Reflection API functions
+export const submitReflection = async (data: ReflectionRequest): Promise<ReflectionResponse> => {
+  const response = await api.post<ReflectionResponse>('/api/reflections', data);
+  return response.data;
+};
+
+export const getStudentReflections = async (studentId: string, params?: { limit?: number; offset?: number }): Promise<StudentReflectionsResponse> => {
+  const response = await api.get<StudentReflectionsResponse>(`/api/reflections/${studentId}`, { params });
+  return response.data;
+};
+
+export const getAllReflections = async (params?: { limit?: number; offset?: number; app_name?: string }): Promise<ReflectionsResponse['data']> => {
+  const response = await api.get<ReflectionsResponse>('/api/reflections', { params });
+  return response.data.data;
+};
+
 export default api;
