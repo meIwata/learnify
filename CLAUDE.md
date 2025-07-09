@@ -103,6 +103,15 @@ Core entities include:
 - Follow SwiftUI best practices for macOS apps
 - Integrate with auto-registration API endpoints
 
+#### SwiftUI Modern API Guidelines
+- **Navigation**: Use `NavigationStack` instead of `NavigationView` for iOS 16+
+- **State Management**: Use `@Observable` macro and `Observation` framework instead of `ObservableObject` and `@Published`
+- **Data Binding**: Use `@State` and `@Bindable` with Observable objects
+- **Animations**: Prefer new animation APIs with `withAnimation` and `Animation` struct
+- **Lists**: Use modern `List` APIs with `ForEach` and proper identifiers
+- **Sheets/Presentations**: Use new presentation APIs like `sheet(item:)` and `fullScreenCover(item:)`
+- **Minimum Deployment**: Target iOS 16+ / macOS 13+ for modern SwiftUI features
+
 ### Available Documentation
 - **LOCAL_DEVELOPMENT.md**: Complete local development setup guide
 - **DEPLOYMENT.md**: Production deployment steps for Supabase + Zeabur

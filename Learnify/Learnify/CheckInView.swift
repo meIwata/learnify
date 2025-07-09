@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct CheckInView: View {
+    @AppStorage("student_id") private var storedStudentId: String = ""
+    @AppStorage("student_name") private var storedStudentName: String = ""
     @State private var studentId: String = ""
     @State private var fullName: String = ""
     @State private var isLoading: Bool = false
@@ -15,6 +17,10 @@ struct CheckInView: View {
     @State private var alertTitle: String = ""
     @State private var alertMessage: String = ""
     @State private var lastCheckInResponse: CheckInResponse?
+    
+    private var hasStoredData: Bool {
+        !storedStudentId.isEmpty && !storedStudentName.isEmpty
+    }
     
     var body: some View {
         ScrollView {
@@ -46,43 +52,75 @@ struct CheckInView: View {
                 
                 // Form
                 VStack(spacing: 25) {
-                    // Student ID Field
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Student ID")
-                            .font(.headline)
-                            .foregroundColor(.primary)
+                    if hasStoredData {
+                        // Show stored data as labels
+                        VStack(spacing: 15) {
+                            HStack {
+                                Text("Student ID:")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Text(storedStudentId)
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 12)
+                                    .background(Color.gray.opacity(0.1))
+                                    .cornerRadius(8)
+                            }
+                            
+                            HStack {
+                                Text("Full Name:")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Text(storedStudentName)
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 12)
+                                    .background(Color.gray.opacity(0.1))
+                                    .cornerRadius(8)
+                            }
+                        }
+                    } else {
+                        // Show input fields for first-time users
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Student ID")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            
+                            TextField("Enter your student ID (e.g., STUDENT2025)", text: $studentId)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.body)
+                                #if os(iOS)
+                                .autocapitalization(.allCharacters)
+                                .disableAutocorrection(true)
+                                .submitLabel(.next)
+                                #endif
+                        }
                         
-                        TextField("Enter your student ID (e.g., STUDENT2025)", text: $studentId)
-                            .textFieldStyle(.roundedBorder)
-                            .font(.body)
-                            #if os(iOS)
-                            .autocapitalization(.allCharacters)
-                            .disableAutocorrection(true)
-                            .submitLabel(.next)
-                            #endif
-                    }
-                    
-                    // Full Name Field
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Full Name")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                        
-                        TextField("Enter your full name", text: $fullName)
-                            .textFieldStyle(.roundedBorder)
-                            .font(.body)
-                            #if os(iOS)
-                            .autocapitalization(.words)
-                            .disableAutocorrection(false)
-                            .submitLabel(.done)
-                            #endif
-                            .onSubmit {
-                                if isFormValid {
-                                    Task {
-                                        await performCheckIn()
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Full Name")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            
+                            TextField("Enter your full name", text: $fullName)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.body)
+                                #if os(iOS)
+                                .autocapitalization(.words)
+                                .disableAutocorrection(false)
+                                .submitLabel(.done)
+                                #endif
+                                .onSubmit {
+                                    if isFormValid {
+                                        Task {
+                                            await performCheckIn()
+                                        }
                                     }
                                 }
-                            }
+                        }
                     }
                 }
                 .padding(.horizontal, 20)
@@ -184,8 +222,12 @@ struct CheckInView: View {
     }
     
     private var isFormValid: Bool {
-        !studentId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        if hasStoredData {
+            return true
+        } else {
+            return !studentId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+                   !fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
     }
     
     private func performCheckIn() async {
@@ -196,11 +238,15 @@ struct CheckInView: View {
         
         isLoading = true
         
+        // Use stored data if available, otherwise use form input
+        let checkInStudentId = hasStoredData ? storedStudentId : studentId.trimmingCharacters(in: .whitespacesAndNewlines)
+        let checkInFullName = hasStoredData ? storedStudentName : fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        
         do {
             print("Performing check-in...")
             let response = try await APIService.shared.checkIn(
-                studentId: studentId.trimmingCharacters(in: .whitespacesAndNewlines),
-                fullName: fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+                studentId: checkInStudentId,
+                fullName: checkInFullName
             )
             
             await MainActor.run {
@@ -209,9 +255,14 @@ struct CheckInView: View {
                 }
                 
                 if response.success {
-                    // Clear form on success
-                    self.studentId = ""
-                    self.fullName = ""
+                    // Save student data to AppStorage after successful check-in
+                    if !hasStoredData {
+                        self.storedStudentId = checkInStudentId
+                        self.storedStudentName = checkInFullName
+                        // Clear form fields after saving to storage
+                        self.studentId = ""
+                        self.fullName = ""
+                    }
                 } else {
                     // Show error if API returned success: false
                     self.alertTitle = "Check-in Failed"

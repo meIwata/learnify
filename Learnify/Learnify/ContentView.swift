@@ -21,6 +21,12 @@ struct ContentView: View {
                     Image(systemName: "person.3")
                     Text("Students")
                 }
+            
+            SettingsView()
+                .tabItem {
+                    Image(systemName: "gear")
+                    Text("Settings")
+                }
         }
         .accentColor(.blue)
     }
