@@ -13,6 +13,7 @@ struct StudentDetailView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showingAlert = false
+    @State private var showingMarks = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -55,7 +56,34 @@ struct StudentDetailView: View {
                 }
             }
             .padding()
-            .background(Color(UIColor.systemGroupedBackground))
+            
+            // View Marks Button
+            Button(action: {
+                showingMarks = true
+            }) {
+                HStack(spacing: 12) {
+                    Image(systemName: "chart.bar.fill")
+                        .font(.title2)
+                    
+                    Text("View Current Marks")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(
+                    LinearGradient(
+                        colors: [.blue, .purple],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .cornerRadius(12)
+                .shadow(color: .blue.opacity(0.3), radius: 6, x: 0, y: 3)
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 8)
             
             // Check-ins List
             VStack(alignment: .leading, spacing: 16) {
@@ -144,6 +172,9 @@ struct StudentDetailView: View {
             }
         } message: {
             Text(errorMessage ?? "Unknown error occurred")
+        }
+        .sheet(isPresented: $showingMarks) {
+            StudentMarksView(student: student, checkIns: checkIns)
         }
     }
     
@@ -258,17 +289,6 @@ struct CheckInRowView: View {
             }
             
             Spacer()
-            
-            VStack(alignment: .trailing) {
-                Text("+10")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.green)
-                
-                Text("points")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
         }
         .padding(.vertical, 4)
     }
