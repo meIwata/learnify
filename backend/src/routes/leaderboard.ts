@@ -164,7 +164,7 @@ router.get('/leaderboard/student/:student_id', async (req: Request, res: Respons
 
     // Get the full leaderboard first (reuse logic from above)
     const leaderboardResponse = await fetch(`${req.protocol}://${req.get('host')}/api/leaderboard?limit=1000`);
-    const leaderboardResult = await leaderboardResponse.json();
+    const leaderboardResult = await leaderboardResponse.json() as { success: boolean; data: { leaderboard: LeaderboardEntry[] } };
 
     if (!leaderboardResult.success) {
       return res.status(500).json({
