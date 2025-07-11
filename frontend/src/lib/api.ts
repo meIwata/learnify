@@ -37,6 +37,15 @@ export interface StudentCheckIn {
   created_at: string;
 }
 
+export interface LeaderboardEntry {
+  student_id: string;
+  full_name: string;
+  total_marks: number;
+  total_check_ins: number;
+  latest_check_in: string | null;
+  rank: number;
+}
+
 // API functions
 export const getAllStudents = async (): Promise<Student[]> => {
   const response = await api.get<{success: boolean, data: {students: Student[], total: number}}>('/api/auto/students');
@@ -54,6 +63,16 @@ export const checkInStudent = async (data: CheckInRequest): Promise<CheckInRespo
 export const getStudentCheckIns = async (studentId: string): Promise<StudentCheckIn[]> => {
   const response = await api.get<{success: boolean, data: {check_ins: StudentCheckIn[]}}>(`/api/auto/check-ins/${studentId}`);
   return response.data.data.check_ins;
+};
+
+export const getLeaderboard = async (limit: number = 50, offset: number = 0): Promise<LeaderboardEntry[]> => {
+  const response = await api.get<{success: boolean, data: {leaderboard: LeaderboardEntry[]}}>('/api/leaderboard', {
+    params: { limit, offset }
+  });
+  if (!response.data.success || !response.data.data.leaderboard) {
+    throw new Error('Failed to fetch leaderboard');
+  }
+  return response.data.data.leaderboard;
 };
 
 export default api;

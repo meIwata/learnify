@@ -19,7 +19,7 @@ const AdminPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Students Overview */}
+          {/* Main Content */}
           <StudentsOverview />
         </div>
       </main>

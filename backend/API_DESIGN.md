@@ -229,6 +229,97 @@ CREATE INDEX idx_student_check_ins_created ON student_check_ins(created_at DESC)
 }
 ```
 
+### GET /api/leaderboard
+**Purpose**: Get ranked leaderboard of all students based on current marks
+
+**Query Parameters**:
+- `limit`: Number of records (default: 50, max: 100)
+- `offset`: Pagination offset (default: 0)
+
+**Success Response** (200):
+```json
+{
+  "success": true,
+  "data": {
+    "leaderboard": [
+      {
+        "student_id": "ALICE2025",
+        "full_name": "Alice Johnson",
+        "total_marks": 10,
+        "total_check_ins": 5,
+        "latest_check_in": "2025-07-01T10:33:06.122Z",
+        "rank": 1
+      },
+      {
+        "student_id": "BOB2025",
+        "full_name": "Bob Smith",
+        "total_marks": 0,
+        "total_check_ins": 0,
+        "latest_check_in": null,
+        "rank": 2
+      }
+    ],
+    "total_students": 2,
+    "showing": {
+      "limit": 50,
+      "offset": 0,
+      "total_pages": 1,
+      "current_page": 1
+    }
+  }
+}
+```
+
+### GET /api/leaderboard/student/:student_id
+**Purpose**: Get specific student's ranking and nearby competitors
+
+**Query Parameters**:
+- `context`: Number of students above/below to show (default: 5, max: 20)
+
+**Success Response** (200):
+```json
+{
+  "success": true,
+  "data": {
+    "student": {
+      "student_id": "ALICE2025",
+      "full_name": "Alice Johnson",
+      "total_marks": 10,
+      "total_check_ins": 5,
+      "latest_check_in": "2025-07-01T10:33:06.122Z",
+      "rank": 1
+    },
+    "context": [
+      {
+        "student_id": "ALICE2025",
+        "full_name": "Alice Johnson", 
+        "total_marks": 10,
+        "total_check_ins": 5,
+        "latest_check_in": "2025-07-01T10:33:06.122Z",
+        "rank": 1
+      }
+    ],
+    "total_students": 10,
+    "student_index": 0
+  }
+}
+```
+
+## Leaderboard Ranking Logic
+
+**Primary Scoring** (Current Implementation):
+- Check-ins: 10 marks if any check-ins exist, 0 otherwise
+- App Review: 10 marks (not implemented yet)
+- Profile Picture: 10 marks (not implemented yet)  
+- GitHub Repository: 10 marks (not implemented yet)
+- GitHub Organization: 10 marks (not implemented yet)
+
+**Ranking Tiebreakers**:
+1. Total marks (descending)
+2. Number of check-ins (descending)
+3. Most recent check-in (more recent first)
+4. Alphabetical by name
+
 ## Base URL
 
 - **Local Development**: http://localhost:3000
