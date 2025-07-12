@@ -445,7 +445,7 @@ CREATE INDEX idx_student_reviews_created ON student_reviews(created_at DESC);
 
 **Primary Scoring** (Current Implementation):
 - Check-ins: 10 marks if any check-ins exist, 0 otherwise
-- App Review: 10 marks (not implemented yet)
+- App Review: 10 marks if any app reviews exist, 0 otherwise
 - Profile Picture: 10 marks (not implemented yet)  
 - GitHub Repository: 10 marks (not implemented yet)
 - GitHub Organization: 10 marks (not implemented yet)

@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getStudentCheckIns, getAllStudents } from '../lib/api';
-import type { Student, StudentCheckIn } from '../lib/api';
+import { getStudentCheckIns, getAllStudents, getStudentReviews } from '../lib/api';
+import type { Student, StudentCheckIn, StudentReview } from '../lib/api';
 
 const ProfilePage: React.FC = () => {
   const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
   const [student, setStudent] = useState<Student | null>(null);
   const [checkIns, setCheckIns] = useState<StudentCheckIn[]>([]);
+  const [reviews, setReviews] = useState<StudentReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkInsLoading, setCheckInsLoading] = useState(false);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,12 +42,23 @@ const ProfilePage: React.FC = () => {
         const studentCheckIns = await getStudentCheckIns(studentId);
         setCheckIns(studentCheckIns);
         
+        // Fetch reviews for this student
+        setReviewsLoading(true);
+        try {
+          const studentReviewsData = await getStudentReviews(studentId);
+          setReviews(studentReviewsData.data.reviews);
+        } catch (err) {
+          console.log('No reviews found for student, this is normal');
+          setReviews([]);
+        }
+        
       } catch (err) {
         setError('Failed to fetch student data');
         console.error('Error fetching student data:', err);
       } finally {
         setLoading(false);
         setCheckInsLoading(false);
+        setReviewsLoading(false);
       }
     };
 
@@ -284,16 +297,26 @@ const ProfilePage: React.FC = () => {
                 {/* App Review Marks */}
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                      <i className="fas fa-mobile-alt text-sm text-gray-400"></i>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      reviews.length > 0 ? 'bg-green-100' : 'bg-gray-100'
+                    }`}>
+                      <i className={`fas fa-mobile-alt text-sm ${
+                        reviews.length > 0 ? 'text-green-600' : 'text-gray-400'
+                      }`}></i>
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">App Review</p>
-                      <p className="text-xs text-gray-500">Not submitted</p>
+                      <p className="text-xs text-gray-500">
+                        {reviews.length > 0 ? `${reviews.length} review${reviews.length > 1 ? 's' : ''} submitted` : 'Not submitted'}
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-lg font-bold text-gray-400">0/10</span>
+                    <span className={`text-lg font-bold ${
+                      reviews.length > 0 ? 'text-green-600' : 'text-gray-400'
+                    }`}>
+                      {reviews.length > 0 ? '10' : '0'}/10
+                    </span>
                   </div>
                 </div>
 
@@ -350,17 +373,34 @@ const ProfilePage: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-lg font-semibold text-gray-900">Total Marks</span>
                     <span className="text-2xl font-bold text-blue-600">
-                      {checkIns.length > 0 ? '10' : '0'}/50
+                      {(() => {
+                        let total = 0;
+                        if (checkIns.length > 0) total += 10;
+                        if (reviews.length > 0) total += 10;
+                        return total;
+                      })()}/50
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                     <div 
                       className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${checkIns.length > 0 ? '20' : '0'}%` }}
+                      style={{ 
+                        width: `${(() => {
+                          let total = 0;
+                          if (checkIns.length > 0) total += 10;
+                          if (reviews.length > 0) total += 10;
+                          return (total / 50) * 100;
+                        })()}%` 
+                      }}
                     ></div>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    {checkIns.length > 0 ? '20' : '0'}% Complete
+                    {(() => {
+                      let total = 0;
+                      if (checkIns.length > 0) total += 10;
+                      if (reviews.length > 0) total += 10;
+                      return (total / 50) * 100;
+                    })()}% Complete
                   </p>
                 </div>
               </div>

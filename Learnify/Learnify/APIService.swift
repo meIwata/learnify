@@ -397,6 +397,68 @@ final class APIService: NSObject, URLSessionTaskDelegate {
         }
         throw lastError ?? APIError.networkError("Failed to fetch leaderboard after multiple retries.")
     }
+    
+    // MARK: - Get Student Reviews
+    func getStudentReviews(studentId: String, params: [String: String] = [:]) async throws -> StudentReviewsResponse {
+        var urlComponents = URLComponents(string: "\(baseURL)/api/reviews/\(studentId)")!
+        
+        if !params.isEmpty {
+            urlComponents.queryItems = params.map { URLQueryItem(name: $0.key, value: $0.value) }
+        }
+        
+        guard let url = urlComponents.url else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        print("📤 Fetching student reviews for: \(studentId)")
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        config.timeoutIntervalForResource = 60.0
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.httpMaximumConnectionsPerHost = 1
+        let session = URLSession(configuration: config)
+
+        let maxRetries = 3
+        var lastError: Error?
+
+        for attempt in 1...maxRetries {
+            do {
+                print("🔄 Student reviews request attempt \(attempt)/\(maxRetries)")
+                let (data, response) = try await session.data(for: request)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    print("❌ Invalid response type for student reviews")
+                    throw APIError.invalidResponse
+                }
+                
+                print("✅ Student reviews HTTP Status: \(httpResponse.statusCode)")
+                
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    print("❌ Student reviews server error: \(httpResponse.statusCode)")
+                    throw APIError.serverError(httpResponse.statusCode)
+                }
+                
+                let reviewsResponse = try JSONDecoder().decode(StudentReviewsResponse.self, from: data)
+                print("✅ Successfully fetched \(reviewsResponse.data.reviews.count) student reviews")
+                return reviewsResponse
+                
+            } catch let error as URLError where error.code == .networkConnectionLost && attempt < maxRetries {
+                print("⚠️ Network connection lost fetching student reviews (Attempt \(attempt)/\(maxRetries)). Error: \(error)")
+                lastError = error
+                try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                continue
+            } catch {
+                print("❌ Student reviews request failed with error: \(error)")
+                throw error
+            }
+        }
+        throw lastError ?? APIError.networkError("Failed to fetch student reviews after multiple retries.")
+    }
 }
 
 // MARK: - Data Models
@@ -481,6 +543,17 @@ struct ShowingInfo: Codable {
     let limit: Int
     let offset: Int
     let app_name_filter: String?
+}
+
+struct StudentReviewsResponse: Codable {
+    let success: Bool
+    let data: StudentReviewsData
+}
+
+struct StudentReviewsData: Codable {
+    let reviews: [StudentReview]
+    let total_reviews: Int
+    let showing: ShowingInfo
 }
 
 struct CheckInRequest: Codable {
