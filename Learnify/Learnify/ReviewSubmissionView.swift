@@ -8,7 +8,8 @@
 import SwiftUI
 
 struct ReviewSubmissionView: View {
-    @State private var studentId: String = ""
+    @AppStorage("student_id") private var storedStudentId: String = ""
+    @AppStorage("student_name") private var storedStudentName: String = ""
     @State private var mobileAppName: String = ""
     @State private var reviewText: String = ""
     @State private var isSubmitting: Bool = false
@@ -17,6 +18,10 @@ struct ReviewSubmissionView: View {
     @State private var alertMessage: String = ""
     @State private var showingSuccess: Bool = false
     @State private var lastSubmissionResponse: ReviewResponse?
+    
+    private var hasStoredData: Bool {
+        !storedStudentId.isEmpty && !storedStudentName.isEmpty
+    }
     
     var body: some View {
         ScrollView {
@@ -48,108 +53,149 @@ struct ReviewSubmissionView: View {
                 
                 // Form
                 VStack(spacing: 25) {
-                    // Student ID Field
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Student ID")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                        
-                        TextField("Enter your student ID", text: $studentId)
-                            .textFieldStyle(.roundedBorder)
-                            .font(.body)
-                            #if os(iOS)
-                            .autocapitalization(.allCharacters)
-                            .disableAutocorrection(true)
-                            .submitLabel(.next)
-                            #endif
-                    }
-                    
-                    // Mobile App Name Field
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Mobile App Name")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                        
-                        TextField("Enter app name (e.g., Instagram, TikTok)", text: $mobileAppName)
-                            .textFieldStyle(.roundedBorder)
-                            .font(.body)
-                            #if os(iOS)
-                            .autocapitalization(.words)
-                            .disableAutocorrection(false)
-                            .submitLabel(.next)
-                            #endif
-                    }
-                    
-                    // Review Text Field
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Your Review")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            TextEditor(text: $reviewText)
-                                .font(.body)
-                                .frame(minHeight: 120)
-                                .padding(8)
-                                .background(Color(UIColor.systemGray6))
-                                .cornerRadius(8)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(Color(UIColor.systemGray4), lineWidth: 1)
-                                )
+                    // Student Info Display (if available)
+                    if hasStoredData {
+                        VStack(spacing: 15) {
+                            HStack {
+                                Text("Student ID:")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Text(storedStudentId)
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 12)
+                                    .background(Color.gray.opacity(0.1))
+                                    .cornerRadius(8)
+                            }
                             
-                            if reviewText.isEmpty {
-                                Text("Share your thoughts about this app. What do you like? What could be improved?")
+                            HStack {
+                                Text("Student Name:")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Text(storedStudentName)
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 12)
+                                    .background(Color.gray.opacity(0.1))
+                                    .cornerRadius(8)
+                            }
+                        }
+                    } else {
+                        // Show message to check in first
+                        VStack(spacing: 12) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 40))
+                                .foregroundColor(.orange)
+                            
+                            Text("Please check in first")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            
+                            Text("You need to complete your first check-in to submit a review. Please go to the Check In tab first.")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding()
+                        .background(Color.orange.opacity(0.1))
+                        .cornerRadius(12)
+                    }
+                    
+                    // Only show form fields if user has checked in
+                    if hasStoredData {
+                        // Mobile App Name Field
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Mobile App Name")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            
+                            TextField("Enter app name (e.g., Instagram, TikTok)", text: $mobileAppName)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.body)
+                                #if os(iOS)
+                                .autocapitalization(.words)
+                                .disableAutocorrection(false)
+                                .submitLabel(.next)
+                                #endif
+                        }
+                        
+                        // Review Text Field
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Your Review")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                TextEditor(text: $reviewText)
+                                    .font(.body)
+                                    .frame(minHeight: 120)
+                                    .padding(8)
+                                    .background(Color(UIColor.systemGray6))
+                                    .cornerRadius(8)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color(UIColor.systemGray4), lineWidth: 1)
+                                    )
+                                
+                                if reviewText.isEmpty {
+                                    Text("Share your thoughts about this app. What do you like? What could be improved?")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .padding(.leading, 4)
+                                }
+                                
+                                Text("\(reviewText.count)/1000 characters")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                     .padding(.leading, 4)
                             }
-                            
-                            Text("\(reviewText.count)/1000 characters")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .padding(.leading, 4)
                         }
                     }
                 }
                 .padding(.horizontal, 20)
                 
-                // Submit Button
-                Button(action: {
-                    Task {
-                        await performSubmission()
-                    }
-                }) {
-                    HStack(spacing: 12) {
-                        if isSubmitting {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                .scaleEffect(0.9)
-                        } else {
-                            Image(systemName: "paperplane.fill")
-                                .font(.title2)
+                // Submit Button (only show if user has checked in)
+                if hasStoredData {
+                    Button(action: {
+                        Task {
+                            await performSubmission()
                         }
-                        
-                        Text(isSubmitting ? "Submitting..." : "Submit Review")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 55)
-                    .background(
-                        LinearGradient(
-                            colors: isFormValid ? [.blue, .purple] : [.gray, .gray],
-                            startPoint: .leading,
-                            endPoint: .trailing
+                    }) {
+                        HStack(spacing: 12) {
+                            if isSubmitting {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.9)
+                            } else {
+                                Image(systemName: "paperplane.fill")
+                                    .font(.title2)
+                            }
+                            
+                            Text(isSubmitting ? "Submitting..." : "Submit Review")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 55)
+                        .background(
+                            LinearGradient(
+                                colors: isFormValid ? [.blue, .purple] : [.gray, .gray],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
-                    )
-                    .cornerRadius(16)
-                    .shadow(color: isFormValid ? .blue.opacity(0.3) : .clear, radius: 8, x: 0, y: 4)
+                        .cornerRadius(16)
+                        .shadow(color: isFormValid ? .blue.opacity(0.3) : .clear, radius: 8, x: 0, y: 4)
+                    }
+                    .disabled(!isFormValid || isSubmitting)
+                    .padding(.horizontal, 20)
+                    .animation(.easeInOut(duration: 0.2), value: isFormValid)
                 }
-                .disabled(!isFormValid || isSubmitting)
-                .padding(.horizontal, 20)
-                .animation(.easeInOut(duration: 0.2), value: isFormValid)
                 
                 // Success Message
                 if showingSuccess, let response = lastSubmissionResponse {
@@ -203,7 +249,7 @@ struct ReviewSubmissionView: View {
     }
     
     private var isFormValid: Bool {
-        !studentId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        hasStoredData &&
         !mobileAppName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !reviewText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -218,7 +264,7 @@ struct ReviewSubmissionView: View {
         
         do {
             let response = try await APIService.shared.submitReview(
-                studentId: studentId.trimmingCharacters(in: .whitespacesAndNewlines),
+                studentId: storedStudentId,
                 mobileAppName: mobileAppName.trimmingCharacters(in: .whitespacesAndNewlines),
                 reviewText: reviewText.trimmingCharacters(in: .whitespacesAndNewlines)
             )
@@ -230,8 +276,7 @@ struct ReviewSubmissionView: View {
                 }
                 
                 if response.success {
-                    // Clear form on success
-                    self.studentId = ""
+                    // Clear form on success (keep student info)
                     self.mobileAppName = ""
                     self.reviewText = ""
                     
