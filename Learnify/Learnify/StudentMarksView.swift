@@ -11,6 +11,8 @@ struct StudentMarksView: View {
     let student: Student
     let checkIns: [StudentCheckIn]
     @Environment(\.dismiss) private var dismiss
+    @State private var reviews: [StudentReview] = []
+    @State private var isLoadingReviews = false
     
     var body: some View {
         NavigationStack {
@@ -55,7 +57,7 @@ struct StudentMarksView: View {
                             
                             Spacer()
                             
-                            Text("\(checkIns.isEmpty ? 0 : 10)/50")
+                            Text("\(totalScore)/50")
                                 .font(.title)
                                 .fontWeight(.bold)
                                 .foregroundColor(.blue)
@@ -68,12 +70,12 @@ struct StudentMarksView: View {
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                 Spacer()
-                                Text("\(checkIns.isEmpty ? 0 : 20)%")
+                                Text("\(Int((Double(totalScore) / 50.0) * 100))%")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
                             
-                            ProgressView(value: checkIns.isEmpty ? 0 : 0.2)
+                            ProgressView(value: Double(totalScore) / 50.0)
                                 .progressViewStyle(LinearProgressViewStyle(tint: .blue))
                                 .scaleEffect(x: 1, y: 1.5, anchor: .center)
                         }
@@ -107,13 +109,13 @@ struct StudentMarksView: View {
                             // App Review Marks
                             ExerciseRowView(
                                 title: "App Review",
-                                subtitle: "Not submitted",
+                                subtitle: reviews.isEmpty ? "Not submitted" : "\(reviews.count) review\(reviews.count > 1 ? "s" : "") submitted",
                                 icon: "iphone",
-                                iconColor: .gray,
-                                backgroundColor: Color.gray.opacity(0.2),
-                                score: 0,
+                                iconColor: reviews.isEmpty ? .gray : .green,
+                                backgroundColor: reviews.isEmpty ? Color.gray.opacity(0.2) : Color.green.opacity(0.2),
+                                score: reviews.isEmpty ? 0 : 10,
                                 maxScore: 10,
-                                isCompleted: false
+                                isCompleted: !reviews.isEmpty
                             )
                             
                             // Profile Picture Marks
@@ -169,6 +171,35 @@ struct StudentMarksView: View {
                     Button("Done") {
                         dismiss()
                     }
+                }
+            }
+            .onAppear {
+                loadStudentReviews()
+            }
+        }
+    }
+    
+    private var totalScore: Int {
+        var score = 0
+        if !checkIns.isEmpty { score += 10 }
+        if !reviews.isEmpty { score += 10 }
+        return score
+    }
+    
+    private func loadStudentReviews() {
+        isLoadingReviews = true
+        Task {
+            do {
+                let reviewsResponse = try await APIService.shared.getStudentReviews(studentId: student.student_id)
+                await MainActor.run {
+                    self.reviews = reviewsResponse.data.reviews
+                    self.isLoadingReviews = false
+                }
+            } catch {
+                await MainActor.run {
+                    print("Failed to load reviews: \(error)")
+                    self.reviews = []
+                    self.isLoadingReviews = false
                 }
             }
         }

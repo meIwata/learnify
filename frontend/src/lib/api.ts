@@ -65,6 +65,83 @@ export const getStudentCheckIns = async (studentId: string): Promise<StudentChec
   return response.data.data.check_ins;
 };
 
+// Review interfaces
+export interface ReviewRequest {
+  student_id: string;
+  mobile_app_name: string;
+  review_text: string;
+}
+
+export interface ReviewResponse {
+  success: boolean;
+  data: {
+    review_id: number;
+    student_id: string;
+    student_name: string;
+    mobile_app_name: string;
+    review_text: string;
+    submitted_at: string;
+  };
+  message: string;
+}
+
+export interface StudentReview {
+  id: number;
+  student_id: string;
+  mobile_app_name: string;
+  review_text: string;
+  created_at: string;
+  students?: {
+    full_name: string;
+  };
+}
+
+export interface ReviewsResponse {
+  success: boolean;
+  data: {
+    reviews: StudentReview[];
+    total_reviews: number;
+    showing: {
+      limit: number;
+      offset: number;
+      app_name_filter?: string;
+    };
+  };
+}
+
+export interface StudentReviewsResponse {
+  success: boolean;
+  data: {
+    student: {
+      student_id: string;
+      full_name: string;
+      uuid: string;
+    };
+    reviews: StudentReview[];
+    total_reviews: number;
+    showing: {
+      limit: number;
+      offset: number;
+    };
+  };
+}
+
+// Review API functions
+export const submitReview = async (data: ReviewRequest): Promise<ReviewResponse> => {
+  const response = await api.post<ReviewResponse>('/api/reviews', data);
+  return response.data;
+};
+
+export const getStudentReviews = async (studentId: string, params?: { limit?: number; offset?: number }): Promise<StudentReviewsResponse> => {
+  const response = await api.get<StudentReviewsResponse>(`/api/reviews/${studentId}`, { params });
+  return response.data;
+};
+
+export const getAllReviews = async (params?: { limit?: number; offset?: number; app_name?: string }): Promise<ReviewsResponse['data']> => {
+  const response = await api.get<ReviewsResponse>('/api/reviews', { params });
+  return response.data.data;
+};
+
 export const getLeaderboard = async (limit: number = 50, offset: number = 0): Promise<LeaderboardEntry[]> => {
   const response = await api.get<{success: boolean, data: {leaderboard: LeaderboardEntry[]}}>('/api/leaderboard', {
     params: { limit, offset }

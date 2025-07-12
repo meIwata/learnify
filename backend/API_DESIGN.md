@@ -119,6 +119,128 @@ Content-Type: application/json
 }
 ```
 
+### POST /api/reviews
+**Purpose**: Submit a mobile app review
+
+**Headers**:
+```
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "student_id": "ALICE2025",
+  "mobile_app_name": "Instagram",
+  "review_text": "Instagram has become a significant part of my daily routine. I appreciate how it allows me to stay connected with friends and discover new content, but I've noticed it can be quite addictive and sometimes makes me feel pressured to present a perfect image of my life."
+}
+```
+
+**Success Response** (201):
+```json
+{
+  "success": true,
+  "data": {
+    "review_id": 1,
+    "student_id": "ALICE2025",
+    "student_name": "Alice Johnson",
+    "mobile_app_name": "Instagram",
+    "review_text": "Instagram has become a significant part of my daily routine...",
+    "submitted_at": "2025-07-01T10:33:06.122Z"
+  },
+  "message": "Review on Instagram submitted successfully"
+}
+```
+
+**Error Responses**:
+
+**400 - Missing Required Field**:
+```json
+{
+  "success": false,
+  "error": "MISSING_STUDENT_ID",
+  "message": "student_id is required"
+}
+```
+
+**404 - Student Not Found**:
+```json
+{
+  "success": false,
+  "error": "STUDENT_NOT_FOUND",
+  "message": "Student ALICE2025 not found"
+}
+```
+
+### GET /api/reviews/:student_id
+**Purpose**: Get student's review history
+
+**Query Parameters**:
+- `limit`: Number of records (default: 10)
+- `offset`: Pagination offset (default: 0)
+
+**Success Response** (200):
+```json
+{
+  "success": true,
+  "data": {
+    "student": {
+      "student_id": "ALICE2025",
+      "full_name": "Alice Johnson",
+      "uuid": "25844486-2b47-4975-850e-e517871ffbe7"
+    },
+    "reviews": [
+      {
+        "id": 1,
+        "mobile_app_name": "Instagram",
+        "review_text": "Instagram has become a significant part of my daily routine...",
+        "created_at": "2025-07-01T10:33:06.122Z"
+      }
+    ],
+    "total_reviews": 1,
+    "showing": {
+      "limit": 10,
+      "offset": 0
+    }
+  }
+}
+```
+
+### GET /api/reviews
+**Purpose**: Get all reviews (admin view)
+
+**Query Parameters**:
+- `limit`: Number of records (default: 20)
+- `offset`: Pagination offset (default: 0)
+- `app_name`: Filter by mobile app name (optional)
+
+**Success Response** (200):
+```json
+{
+  "success": true,
+  "data": {
+    "reviews": [
+      {
+        "id": 1,
+        "student_id": "ALICE2025",
+        "mobile_app_name": "Instagram",
+        "review_text": "Instagram has become a significant part of my daily routine...",
+        "created_at": "2025-07-01T10:33:06.122Z",
+        "students": {
+          "full_name": "Alice Johnson"
+        }
+      }
+    ],
+    "total_reviews": 1,
+    "showing": {
+      "limit": 20,
+      "offset": 0,
+      "app_name_filter": null
+    }
+  }
+}
+```
+
 ---
 
 ## 🔒 **Legacy APIs (Authentication Required)**
@@ -201,10 +323,24 @@ CREATE TABLE student_check_ins (
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- student_reviews table - Mobile app review submissions
+CREATE TABLE student_reviews (
+    id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    student_id text NOT NULL,
+    student_uuid uuid REFERENCES students(id),
+    mobile_app_name text NOT NULL,
+    review_text text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
 -- Performance indexes
 CREATE INDEX idx_students_student_id ON students(student_id);
 CREATE INDEX idx_student_check_ins_student_id ON student_check_ins(student_id);
 CREATE INDEX idx_student_check_ins_created ON student_check_ins(created_at DESC);
+CREATE INDEX idx_student_reviews_student_id ON student_reviews(student_id);
+CREATE INDEX idx_student_reviews_app_name ON student_reviews(mobile_app_name);
+CREATE INDEX idx_student_reviews_created ON student_reviews(created_at DESC);
 ```
 
 ## Current Business Rules
@@ -309,7 +445,7 @@ CREATE INDEX idx_student_check_ins_created ON student_check_ins(created_at DESC)
 
 **Primary Scoring** (Current Implementation):
 - Check-ins: 10 marks if any check-ins exist, 0 otherwise
-- App Review: 10 marks (not implemented yet)
+- App Review: 10 marks if any app reviews exist, 0 otherwise
 - Profile Picture: 10 marks (not implemented yet)  
 - GitHub Repository: 10 marks (not implemented yet)
 - GitHub Organization: 10 marks (not implemented yet)

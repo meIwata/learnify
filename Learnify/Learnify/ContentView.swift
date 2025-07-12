@@ -22,6 +22,18 @@ struct ContentView: View {
                     Text("Students")
                 }
             
+            ReviewSubmissionView()
+                .tabItem {
+                    Image(systemName: "bubble.left.and.bubble.right")
+                    Text("Review")
+                }
+            
+            ReviewsListView()
+                .tabItem {
+                    Image(systemName: "list.bullet.rectangle")
+                    Text("All Reviews")
+                }
+            
             LeaderboardView()
                 .tabItem {
                     Image(systemName: "trophy.fill")
