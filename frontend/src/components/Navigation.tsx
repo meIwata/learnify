@@ -55,7 +55,6 @@ const Navigation: React.FC = () => {
             >
               Leaderboard
             </Link>
-            <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">Submissions</a>
           </div>
 
           {/* User Profile & Actions */}
