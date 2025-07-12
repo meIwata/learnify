@@ -304,7 +304,6 @@ final class APIService: NSObject, URLSessionTaskDelegate {
 
         for attempt in 1...maxRetries {
             do {
-<<<<<<< HEAD
                 print("🔄 Reviews request attempt \(attempt)/\(maxRetries)")
                 let (data, response) = try await session.data(for: request)
                 
@@ -525,10 +524,6 @@ enum APIError: Error, LocalizedError {
         case .networkError(let message):
             return "A network error occurred: \(message)"
         }
-    }
-    
-    static var invalidURL: APIError {
-        return .networkError("Invalid URL")
     }
 }
 
