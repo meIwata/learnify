@@ -33,6 +33,18 @@ struct ContentView: View {
                     Image(systemName: "list.bullet.rectangle")
                     Text("All Reviews")
                 }
+            
+            LeaderboardView()
+                .tabItem {
+                    Image(systemName: "trophy.fill")
+                    Text("Leaderboard")
+                }
+            
+            SettingsView()
+                .tabItem {
+                    Image(systemName: "gear")
+                    Text("Settings")
+                }
         }
         .accentColor(.blue)
     }

@@ -304,6 +304,7 @@ final class APIService: NSObject, URLSessionTaskDelegate {
 
         for attempt in 1...maxRetries {
             do {
+<<<<<<< HEAD
                 print("🔄 Reviews request attempt \(attempt)/\(maxRetries)")
                 let (data, response) = try await session.data(for: request)
                 
@@ -334,6 +335,68 @@ final class APIService: NSObject, URLSessionTaskDelegate {
             }
         }
         throw lastError ?? APIError.networkError("Failed to fetch reviews after multiple retries.")
+    }
+    
+    // MARK: - Leaderboard
+    func getLeaderboard(limit: Int = 50, offset: Int = 0) async throws -> [LeaderboardEntry] {
+        var urlComponents = URLComponents(string: "\(baseURL)/api/leaderboard")!
+        urlComponents.queryItems = [
+            URLQueryItem(name: "limit", value: String(limit)),
+            URLQueryItem(name: "offset", value: String(offset))
+        ]
+        
+        guard let url = urlComponents.url else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        print("📤 Fetching leaderboard")
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        config.timeoutIntervalForResource = 60.0
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.httpMaximumConnectionsPerHost = 1
+        let session = URLSession(configuration: config)
+
+        let maxRetries = 3
+        var lastError: Error?
+
+        for attempt in 1...maxRetries {
+            do {
+                print("🔄 Leaderboard request attempt \(attempt)/\(maxRetries)")
+                let (data, response) = try await session.data(for: request)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    print("❌ Invalid response type for leaderboard")
+                    throw APIError.invalidResponse
+                }
+                
+                print("✅ Leaderboard HTTP Status: \(httpResponse.statusCode)")
+                
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    print("❌ Leaderboard server error: \(httpResponse.statusCode)")
+                    throw APIError.serverError(httpResponse.statusCode)
+                }
+                
+                let leaderboardResponse = try JSONDecoder().decode(LeaderboardResponse.self, from: data)
+                print("✅ Successfully fetched \(leaderboardResponse.data.leaderboard.count) leaderboard entries")
+                return leaderboardResponse.data.leaderboard
+                
+            } catch let error as URLError where error.code == .networkConnectionLost && attempt < maxRetries {
+                print("⚠️ Network connection lost fetching leaderboard (Attempt \(attempt)/\(maxRetries)). Error: \(error)")
+                lastError = error
+                try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                continue
+            } catch {
+                print("❌ Leaderboard request failed with error: \(error)")
+                throw error
+            }
+        }
+        throw lastError ?? APIError.networkError("Failed to fetch leaderboard after multiple retries.")
     }
 }
 
@@ -463,4 +526,39 @@ enum APIError: Error, LocalizedError {
             return "A network error occurred: \(message)"
         }
     }
+    
+    static var invalidURL: APIError {
+        return .networkError("Invalid URL")
+    }
+}
+
+// MARK: - Leaderboard Data Models
+
+struct LeaderboardEntry: Codable, Identifiable {
+    let student_id: String
+    let full_name: String
+    let total_marks: Int
+    let total_check_ins: Int
+    let latest_check_in: String?
+    let rank: Int
+    
+    var id: String { student_id }
+}
+
+struct LeaderboardResponse: Codable {
+    let success: Bool
+    let data: LeaderboardData
+}
+
+struct LeaderboardData: Codable {
+    let leaderboard: [LeaderboardEntry]
+    let total_students: Int
+    let showing: LeaderboardPagination
+}
+
+struct LeaderboardPagination: Codable {
+    let limit: Int
+    let offset: Int
+    let total_pages: Int?
+    let current_page: Int?
 }

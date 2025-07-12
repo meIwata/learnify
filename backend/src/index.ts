@@ -11,6 +11,7 @@ import path from 'path';
 // import { testCheckInRouter } from './routes/testCheckIn';
 import { autoCheckInRouter } from './routes/autoCheckIn';
 import { reviewsRouter } from './routes/reviews';
+import leaderboardRouter from './routes/leaderboard';
 import { config } from './config/supabase';
 
 // Load environment variables
@@ -55,6 +56,7 @@ app.get('/health', (req: Request, res: Response) => {
 // app.use('/api', testCheckInRouter);
 app.use('/api', autoCheckInRouter);
 app.use('/api', reviewsRouter);
+app.use('/api', leaderboardRouter);
 
 // Root endpoint
 app.get('/', (req: Request, res: Response) => {
