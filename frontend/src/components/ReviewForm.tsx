@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { submitReflection } from '../lib/api';
+import { submitReview } from '../lib/api';
 
-interface ReflectionFormProps {
+interface ReviewFormProps {
   onSubmissionSuccess?: () => void;
 }
 
-const ReflectionForm: React.FC<ReflectionFormProps> = ({ onSubmissionSuccess }) => {
+const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmissionSuccess }) => {
   const [formData, setFormData] = useState({
     studentId: '',
     mobileAppName: '',
-    reflectionText: ''
+    reviewText: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -18,7 +18,7 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({ onSubmissionSuccess }) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.studentId.trim() || !formData.mobileAppName.trim() || !formData.reflectionText.trim()) {
+    if (!formData.studentId.trim() || !formData.mobileAppName.trim() || !formData.reviewText.trim()) {
       setError('All fields are required');
       return;
     }
@@ -27,14 +27,14 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({ onSubmissionSuccess }) 
     setError(null);
 
     try {
-      await submitReflection({
+      await submitReview({
         student_id: formData.studentId.trim(),
         mobile_app_name: formData.mobileAppName.trim(),
-        reflection_text: formData.reflectionText.trim()
+        review_text: formData.reviewText.trim()
       });
 
       setShowSuccess(true);
-      setFormData({ studentId: '', mobileAppName: '', reflectionText: '' });
+      setFormData({ studentId: '', mobileAppName: '', reviewText: '' });
       
       if (onSubmissionSuccess) {
         onSubmissionSuccess();
@@ -43,7 +43,7 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({ onSubmissionSuccess }) 
       // Hide success message after 5 seconds
       setTimeout(() => setShowSuccess(false), 5000);
     } catch (err: any) {
-      setError(err.message || 'Failed to submit reflection');
+      setError(err.message || 'Failed to submit review');
     } finally {
       setIsSubmitting(false);
     }
@@ -57,7 +57,7 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({ onSubmissionSuccess }) 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Submit App Reflection</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Submit App Review</h2>
         <p className="text-gray-600">Share your thoughts about a mobile app you've been using.</p>
       </div>
 
@@ -67,7 +67,7 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({ onSubmissionSuccess }) 
           <div className="flex items-center">
             <i className="fas fa-check-circle text-green-600 mr-3"></i>
             <div>
-              <p className="text-green-800 font-medium">Reflection submitted successfully!</p>
+              <p className="text-green-800 font-medium">Review submitted successfully!</p>
               <p className="text-green-700 text-sm">Thank you for sharing your insights.</p>
             </div>
           </div>
@@ -117,31 +117,31 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({ onSubmissionSuccess }) 
           />
         </div>
 
-        {/* Reflection Text */}
+        {/* Review Text */}
         <div>
-          <label htmlFor="reflectionText" className="block text-sm font-medium text-gray-700 mb-2">
-            Your Reflection <span className="text-red-500">*</span>
+          <label htmlFor="reviewText" className="block text-sm font-medium text-gray-700 mb-2">
+            Your Review <span className="text-red-500">*</span>
           </label>
           <textarea
-            id="reflectionText"
-            value={formData.reflectionText}
-            onChange={(e) => handleChange('reflectionText', e.target.value)}
+            id="reviewText"
+            value={formData.reviewText}
+            onChange={(e) => handleChange('reviewText', e.target.value)}
             placeholder="Share your thoughts about this app. What do you like? What could be improved? How does it impact your daily life?"
             rows={6}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
             required
           />
           <p className="text-sm text-gray-500 mt-2">
-            {formData.reflectionText.length}/1000 characters
+            {formData.reviewText.length}/1000 characters
           </p>
         </div>
 
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={isSubmitting || !formData.studentId.trim() || !formData.mobileAppName.trim() || !formData.reflectionText.trim()}
+          disabled={isSubmitting || !formData.studentId.trim() || !formData.mobileAppName.trim() || !formData.reviewText.trim()}
           className={`w-full py-3 px-6 rounded-lg font-semibold transition-all ${
-            isSubmitting || !formData.studentId.trim() || !formData.mobileAppName.trim() || !formData.reflectionText.trim()
+            isSubmitting || !formData.studentId.trim() || !formData.mobileAppName.trim() || !formData.reviewText.trim()
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-gradient-to-r from-blue-600 to-purple-700 text-white hover:from-blue-700 hover:to-purple-800 shadow-lg hover:shadow-xl'
           }`}
@@ -154,7 +154,7 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({ onSubmissionSuccess }) 
           ) : (
             <div className="flex items-center justify-center">
               <i className="fas fa-paper-plane mr-2"></i>
-              Submit Reflection
+              Submit Review
             </div>
           )}
         </button>
@@ -163,4 +163,4 @@ const ReflectionForm: React.FC<ReflectionFormProps> = ({ onSubmissionSuccess }) 
   );
 };
 
-export default ReflectionForm;
+export default ReviewForm;

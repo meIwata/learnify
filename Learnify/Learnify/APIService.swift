@@ -211,21 +211,21 @@ final class APIService: NSObject, URLSessionTaskDelegate {
         throw lastError ?? APIError.networkError("Failed to fetch check-ins after multiple retries.")
     }
     
-    // MARK: - Submit Reflection
-    func submitReflection(studentId: String, mobileAppName: String, reflectionText: String) async throws -> ReflectionResponse {
-        let url = URL(string: "\(baseURL)/api/reflections")!
+    // MARK: - Submit Review
+    func submitReview(studentId: String, mobileAppName: String, reviewText: String) async throws -> ReviewResponse {
+        let url = URL(string: "\(baseURL)/api/reviews")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         
-        let reflectionData = ReflectionRequest(
+        let reviewData = ReviewRequest(
             student_id: studentId,
             mobile_app_name: mobileAppName,
-            reflection_text: reflectionText
+            review_text: reviewText
         )
         
-        print("📤 Submitting reflection: \(studentId) - \(mobileAppName)")
+        print("📤 Submitting review: \(studentId) - \(mobileAppName)")
         
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30.0
@@ -239,44 +239,44 @@ final class APIService: NSObject, URLSessionTaskDelegate {
 
         for attempt in 1...maxRetries {
             do {
-                let jsonData = try JSONEncoder().encode(reflectionData)
+                let jsonData = try JSONEncoder().encode(reviewData)
                 request.httpBody = jsonData
                 
-                print("🔄 Reflection submission attempt \(attempt)/\(maxRetries)")
+                print("🔄 Review submission attempt \(attempt)/\(maxRetries)")
                 let (data, response) = try await session.data(for: request)
                 
                 guard let httpResponse = response as? HTTPURLResponse else {
-                    print("❌ Invalid response type for reflection")
+                    print("❌ Invalid response type for review")
                     throw APIError.invalidResponse
                 }
                 
-                print("✅ Reflection HTTP Status: \(httpResponse.statusCode)")
+                print("✅ Review HTTP Status: \(httpResponse.statusCode)")
                 
                 guard (200...299).contains(httpResponse.statusCode) else {
-                    print("❌ Reflection server error: \(httpResponse.statusCode)")
+                    print("❌ Review server error: \(httpResponse.statusCode)")
                     throw APIError.serverError(httpResponse.statusCode)
                 }
                 
-                let reflectionResponse = try JSONDecoder().decode(ReflectionResponse.self, from: data)
-                print("✅ Reflection submitted successfully")
-                return reflectionResponse
+                let reviewResponse = try JSONDecoder().decode(ReviewResponse.self, from: data)
+                print("✅ Review submitted successfully")
+                return reviewResponse
                 
             } catch let error as URLError where error.code == .networkConnectionLost && attempt < maxRetries {
-                print("⚠️ Network connection lost submitting reflection (Attempt \(attempt)/\(maxRetries)). Error: \(error)")
+                print("⚠️ Network connection lost submitting review (Attempt \(attempt)/\(maxRetries)). Error: \(error)")
                 lastError = error
                 try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
                 continue
             } catch {
-                print("❌ Reflection submission failed with error: \(error)")
+                print("❌ Review submission failed with error: \(error)")
                 throw error
             }
         }
-        throw lastError ?? APIError.networkError("Failed to submit reflection after multiple retries.")
+        throw lastError ?? APIError.networkError("Failed to submit review after multiple retries.")
     }
     
-    // MARK: - Get All Reflections
-    func getAllReflections(params: [String: String] = [:]) async throws -> [StudentReflection] {
-        var urlComponents = URLComponents(string: "\(baseURL)/api/reflections")!
+    // MARK: - Get All Reviews
+    func getAllReviews(params: [String: String] = [:]) async throws -> [StudentReview] {
+        var urlComponents = URLComponents(string: "\(baseURL)/api/reviews")!
         
         if !params.isEmpty {
             urlComponents.queryItems = params.map { URLQueryItem(name: $0.key, value: $0.value) }
@@ -290,7 +290,7 @@ final class APIService: NSObject, URLSessionTaskDelegate {
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         
-        print("📤 Fetching all reflections")
+        print("📤 Fetching all reviews")
         
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30.0
@@ -304,36 +304,36 @@ final class APIService: NSObject, URLSessionTaskDelegate {
 
         for attempt in 1...maxRetries {
             do {
-                print("🔄 Reflections request attempt \(attempt)/\(maxRetries)")
+                print("🔄 Reviews request attempt \(attempt)/\(maxRetries)")
                 let (data, response) = try await session.data(for: request)
                 
                 guard let httpResponse = response as? HTTPURLResponse else {
-                    print("❌ Invalid response type for reflections")
+                    print("❌ Invalid response type for reviews")
                     throw APIError.invalidResponse
                 }
                 
-                print("✅ Reflections HTTP Status: \(httpResponse.statusCode)")
+                print("✅ Reviews HTTP Status: \(httpResponse.statusCode)")
                 
                 guard (200...299).contains(httpResponse.statusCode) else {
-                    print("❌ Reflections server error: \(httpResponse.statusCode)")
+                    print("❌ Reviews server error: \(httpResponse.statusCode)")
                     throw APIError.serverError(httpResponse.statusCode)
                 }
                 
-                let reflectionsResponse = try JSONDecoder().decode(ReflectionsResponse.self, from: data)
-                print("✅ Successfully fetched \(reflectionsResponse.data.reflections.count) reflections")
-                return reflectionsResponse.data.reflections
+                let reviewsResponse = try JSONDecoder().decode(ReviewsResponse.self, from: data)
+                print("✅ Successfully fetched \(reviewsResponse.data.reviews.count) reviews")
+                return reviewsResponse.data.reviews
                 
             } catch let error as URLError where error.code == .networkConnectionLost && attempt < maxRetries {
-                print("⚠️ Network connection lost fetching reflections (Attempt \(attempt)/\(maxRetries)). Error: \(error)")
+                print("⚠️ Network connection lost fetching reviews (Attempt \(attempt)/\(maxRetries)). Error: \(error)")
                 lastError = error
                 try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
                 continue
             } catch {
-                print("❌ Reflections request failed with error: \(error)")
+                print("❌ Reviews request failed with error: \(error)")
                 throw error
             }
         }
-        throw lastError ?? APIError.networkError("Failed to fetch reflections after multiple retries.")
+        throw lastError ?? APIError.networkError("Failed to fetch reviews after multiple retries.")
     }
 }
 
@@ -370,32 +370,32 @@ struct CheckInsData: Codable {
     let check_ins: [StudentCheckIn]
 }
 
-struct ReflectionRequest: Codable {
+struct ReviewRequest: Codable {
     let student_id: String
     let mobile_app_name: String
-    let reflection_text: String
+    let review_text: String
 }
 
-struct ReflectionResponse: Codable {
+struct ReviewResponse: Codable {
     let success: Bool
-    let data: ReflectionData
+    let data: ReviewData
     let message: String
 }
 
-struct ReflectionData: Codable {
-    let reflection_id: Int
+struct ReviewData: Codable {
+    let review_id: Int
     let student_id: String
     let student_name: String
     let mobile_app_name: String
-    let reflection_text: String
+    let review_text: String
     let submitted_at: String
 }
 
-struct StudentReflection: Codable, Identifiable {
+struct StudentReview: Codable, Identifiable {
     let id: Int
     let student_id: String
     let mobile_app_name: String
-    let reflection_text: String
+    let review_text: String
     let created_at: String
     let students: StudentInfo?
 }
@@ -404,14 +404,14 @@ struct StudentInfo: Codable {
     let full_name: String
 }
 
-struct ReflectionsResponse: Codable {
+struct ReviewsResponse: Codable {
     let success: Bool
-    let data: ReflectionsData
+    let data: ReviewsData
 }
 
-struct ReflectionsData: Codable {
-    let reflections: [StudentReflection]
-    let total_reflections: Int
+struct ReviewsData: Codable {
+    let reviews: [StudentReview]
+    let total_reviews: Int
     let showing: ShowingInfo
 }
 

@@ -7,16 +7,16 @@
 
 import SwiftUI
 
-struct ReflectionSubmissionView: View {
+struct ReviewSubmissionView: View {
     @State private var studentId: String = ""
     @State private var mobileAppName: String = ""
-    @State private var reflectionText: String = ""
+    @State private var reviewText: String = ""
     @State private var isSubmitting: Bool = false
     @State private var showingAlert: Bool = false
     @State private var alertTitle: String = ""
     @State private var alertMessage: String = ""
     @State private var showingSuccess: Bool = false
-    @State private var lastSubmissionResponse: ReflectionResponse?
+    @State private var lastSubmissionResponse: ReviewResponse?
     
     var body: some View {
         ScrollView {
@@ -33,7 +33,7 @@ struct ReflectionSubmissionView: View {
                             )
                         )
                     
-                    Text("App Reflection")
+                    Text("App Review")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.primary)
@@ -80,14 +80,14 @@ struct ReflectionSubmissionView: View {
                             #endif
                     }
                     
-                    // Reflection Text Field
+                    // Review Text Field
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Your Reflection")
+                        Text("Your Review")
                             .font(.headline)
                             .foregroundColor(.primary)
                         
                         VStack(alignment: .leading, spacing: 4) {
-                            TextEditor(text: $reflectionText)
+                            TextEditor(text: $reviewText)
                                 .font(.body)
                                 .frame(minHeight: 120)
                                 .padding(8)
@@ -98,14 +98,14 @@ struct ReflectionSubmissionView: View {
                                         .stroke(Color(UIColor.systemGray4), lineWidth: 1)
                                 )
                             
-                            if reflectionText.isEmpty {
+                            if reviewText.isEmpty {
                                 Text("Share your thoughts about this app. What do you like? What could be improved?")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                     .padding(.leading, 4)
                             }
                             
-                            Text("\(reflectionText.count)/1000 characters")
+                            Text("\(reviewText.count)/1000 characters")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .padding(.leading, 4)
@@ -130,7 +130,7 @@ struct ReflectionSubmissionView: View {
                                 .font(.title2)
                         }
                         
-                        Text(isSubmitting ? "Submitting..." : "Submit Reflection")
+                        Text(isSubmitting ? "Submitting..." : "Submit Review")
                             .font(.headline)
                             .fontWeight(.semibold)
                     }
@@ -159,7 +159,7 @@ struct ReflectionSubmissionView: View {
                                 .foregroundColor(.green)
                                 .font(.title2)
                             
-                            Text("Reflection Submitted!")
+                            Text("Review Submitted!")
                                 .font(.headline)
                                 .foregroundColor(.green)
                         }
@@ -190,7 +190,7 @@ struct ReflectionSubmissionView: View {
                 Spacer(minLength: 50)
             }
         }
-        .navigationTitle("App Reflection")
+        .navigationTitle("App Review")
         .navigationBarTitleDisplayMode(.inline)
         .alert(alertTitle, isPresented: $showingAlert) {
             Button("OK") { }
@@ -205,7 +205,7 @@ struct ReflectionSubmissionView: View {
     private var isFormValid: Bool {
         !studentId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !mobileAppName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !reflectionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !reviewText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     
     private func performSubmission() async {
@@ -217,10 +217,10 @@ struct ReflectionSubmissionView: View {
         showingSuccess = false
         
         do {
-            let response = try await APIService.shared.submitReflection(
+            let response = try await APIService.shared.submitReview(
                 studentId: studentId.trimmingCharacters(in: .whitespacesAndNewlines),
                 mobileAppName: mobileAppName.trimmingCharacters(in: .whitespacesAndNewlines),
-                reflectionText: reflectionText.trimmingCharacters(in: .whitespacesAndNewlines)
+                reviewText: reviewText.trimmingCharacters(in: .whitespacesAndNewlines)
             )
             
             await MainActor.run {
@@ -233,7 +233,7 @@ struct ReflectionSubmissionView: View {
                     // Clear form on success
                     self.studentId = ""
                     self.mobileAppName = ""
-                    self.reflectionText = ""
+                    self.reviewText = ""
                     
                     // Hide success message after 5 seconds
                     DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
@@ -269,6 +269,6 @@ struct ReflectionSubmissionView: View {
 
 #Preview {
     NavigationStack {
-        ReflectionSubmissionView()
+        ReviewSubmissionView()
     }
 }

@@ -119,8 +119,8 @@ Content-Type: application/json
 }
 ```
 
-### POST /api/reflections
-**Purpose**: Submit a mobile app reflection
+### POST /api/reviews
+**Purpose**: Submit a mobile app review
 
 **Headers**:
 ```
@@ -132,7 +132,7 @@ Content-Type: application/json
 {
   "student_id": "ALICE2025",
   "mobile_app_name": "Instagram",
-  "reflection_text": "Instagram has become a significant part of my daily routine. I appreciate how it allows me to stay connected with friends and discover new content, but I've noticed it can be quite addictive and sometimes makes me feel pressured to present a perfect image of my life."
+  "review_text": "Instagram has become a significant part of my daily routine. I appreciate how it allows me to stay connected with friends and discover new content, but I've noticed it can be quite addictive and sometimes makes me feel pressured to present a perfect image of my life."
 }
 ```
 
@@ -141,14 +141,14 @@ Content-Type: application/json
 {
   "success": true,
   "data": {
-    "reflection_id": 1,
+    "review_id": 1,
     "student_id": "ALICE2025",
     "student_name": "Alice Johnson",
     "mobile_app_name": "Instagram",
-    "reflection_text": "Instagram has become a significant part of my daily routine...",
+    "review_text": "Instagram has become a significant part of my daily routine...",
     "submitted_at": "2025-07-01T10:33:06.122Z"
   },
-  "message": "Reflection on Instagram submitted successfully"
+  "message": "Review on Instagram submitted successfully"
 }
 ```
 
@@ -172,8 +172,8 @@ Content-Type: application/json
 }
 ```
 
-### GET /api/reflections/:student_id
-**Purpose**: Get student's reflection history
+### GET /api/reviews/:student_id
+**Purpose**: Get student's review history
 
 **Query Parameters**:
 - `limit`: Number of records (default: 10)
@@ -189,15 +189,15 @@ Content-Type: application/json
       "full_name": "Alice Johnson",
       "uuid": "25844486-2b47-4975-850e-e517871ffbe7"
     },
-    "reflections": [
+    "reviews": [
       {
         "id": 1,
         "mobile_app_name": "Instagram",
-        "reflection_text": "Instagram has become a significant part of my daily routine...",
+        "review_text": "Instagram has become a significant part of my daily routine...",
         "created_at": "2025-07-01T10:33:06.122Z"
       }
     ],
-    "total_reflections": 1,
+    "total_reviews": 1,
     "showing": {
       "limit": 10,
       "offset": 0
@@ -206,8 +206,8 @@ Content-Type: application/json
 }
 ```
 
-### GET /api/reflections
-**Purpose**: Get all reflections (admin view)
+### GET /api/reviews
+**Purpose**: Get all reviews (admin view)
 
 **Query Parameters**:
 - `limit`: Number of records (default: 20)
@@ -219,19 +219,19 @@ Content-Type: application/json
 {
   "success": true,
   "data": {
-    "reflections": [
+    "reviews": [
       {
         "id": 1,
         "student_id": "ALICE2025",
         "mobile_app_name": "Instagram",
-        "reflection_text": "Instagram has become a significant part of my daily routine...",
+        "review_text": "Instagram has become a significant part of my daily routine...",
         "created_at": "2025-07-01T10:33:06.122Z",
         "students": {
           "full_name": "Alice Johnson"
         }
       }
     ],
-    "total_reflections": 1,
+    "total_reviews": 1,
     "showing": {
       "limit": 20,
       "offset": 0,
@@ -323,13 +323,13 @@ CREATE TABLE student_check_ins (
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
--- student_reflections table - Mobile app reflection submissions
-CREATE TABLE student_reflections (
+-- student_reviews table - Mobile app review submissions
+CREATE TABLE student_reviews (
     id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     student_id text NOT NULL,
     student_uuid uuid REFERENCES students(id),
     mobile_app_name text NOT NULL,
-    reflection_text text NOT NULL,
+    review_text text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -338,9 +338,9 @@ CREATE TABLE student_reflections (
 CREATE INDEX idx_students_student_id ON students(student_id);
 CREATE INDEX idx_student_check_ins_student_id ON student_check_ins(student_id);
 CREATE INDEX idx_student_check_ins_created ON student_check_ins(created_at DESC);
-CREATE INDEX idx_student_reflections_student_id ON student_reflections(student_id);
-CREATE INDEX idx_student_reflections_app_name ON student_reflections(mobile_app_name);
-CREATE INDEX idx_student_reflections_created ON student_reflections(created_at DESC);
+CREATE INDEX idx_student_reviews_student_id ON student_reviews(student_id);
+CREATE INDEX idx_student_reviews_app_name ON student_reviews(mobile_app_name);
+CREATE INDEX idx_student_reviews_created ON student_reviews(created_at DESC);
 ```
 
 ## Current Business Rules

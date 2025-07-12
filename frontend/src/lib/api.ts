@@ -56,42 +56,42 @@ export const getStudentCheckIns = async (studentId: string): Promise<StudentChec
   return response.data.data.check_ins;
 };
 
-// Reflection interfaces
-export interface ReflectionRequest {
+// Review interfaces
+export interface ReviewRequest {
   student_id: string;
   mobile_app_name: string;
-  reflection_text: string;
+  review_text: string;
 }
 
-export interface ReflectionResponse {
+export interface ReviewResponse {
   success: boolean;
   data: {
-    reflection_id: number;
+    review_id: number;
     student_id: string;
     student_name: string;
     mobile_app_name: string;
-    reflection_text: string;
+    review_text: string;
     submitted_at: string;
   };
   message: string;
 }
 
-export interface StudentReflection {
+export interface StudentReview {
   id: number;
   student_id: string;
   mobile_app_name: string;
-  reflection_text: string;
+  review_text: string;
   created_at: string;
   students?: {
     full_name: string;
   };
 }
 
-export interface ReflectionsResponse {
+export interface ReviewsResponse {
   success: boolean;
   data: {
-    reflections: StudentReflection[];
-    total_reflections: number;
+    reviews: StudentReview[];
+    total_reviews: number;
     showing: {
       limit: number;
       offset: number;
@@ -100,7 +100,7 @@ export interface ReflectionsResponse {
   };
 }
 
-export interface StudentReflectionsResponse {
+export interface StudentReviewsResponse {
   success: boolean;
   data: {
     student: {
@@ -108,8 +108,8 @@ export interface StudentReflectionsResponse {
       full_name: string;
       uuid: string;
     };
-    reflections: StudentReflection[];
-    total_reflections: number;
+    reviews: StudentReview[];
+    total_reviews: number;
     showing: {
       limit: number;
       offset: number;
@@ -117,19 +117,19 @@ export interface StudentReflectionsResponse {
   };
 }
 
-// Reflection API functions
-export const submitReflection = async (data: ReflectionRequest): Promise<ReflectionResponse> => {
-  const response = await api.post<ReflectionResponse>('/api/reflections', data);
+// Review API functions
+export const submitReview = async (data: ReviewRequest): Promise<ReviewResponse> => {
+  const response = await api.post<ReviewResponse>('/api/reviews', data);
   return response.data;
 };
 
-export const getStudentReflections = async (studentId: string, params?: { limit?: number; offset?: number }): Promise<StudentReflectionsResponse> => {
-  const response = await api.get<StudentReflectionsResponse>(`/api/reflections/${studentId}`, { params });
+export const getStudentReviews = async (studentId: string, params?: { limit?: number; offset?: number }): Promise<StudentReviewsResponse> => {
+  const response = await api.get<StudentReviewsResponse>(`/api/reviews/${studentId}`, { params });
   return response.data;
 };
 
-export const getAllReflections = async (params?: { limit?: number; offset?: number; app_name?: string }): Promise<ReflectionsResponse['data']> => {
-  const response = await api.get<ReflectionsResponse>('/api/reflections', { params });
+export const getAllReviews = async (params?: { limit?: number; offset?: number; app_name?: string }): Promise<ReviewsResponse['data']> => {
+  const response = await api.get<ReviewsResponse>('/api/reviews', { params });
   return response.data.data;
 };
 

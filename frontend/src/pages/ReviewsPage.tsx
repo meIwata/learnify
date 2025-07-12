@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import ReflectionForm from '../components/ReflectionForm';
-import ReflectionsList from '../components/ReflectionsList';
+import ReviewForm from '../components/ReviewForm';
+import ReviewsList from '../components/ReviewsList';
 
-const ReflectionsPage: React.FC = () => {
+const ReviewsPage: React.FC = () => {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handleSubmissionSuccess = () => {
-    // Trigger a refresh of the reflections list
+    // Trigger a refresh of the reviews list
     setRefreshKey(prev => prev + 1);
   };
 
@@ -15,7 +15,7 @@ const ReflectionsPage: React.FC = () => {
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-700 text-white">
         <div className="max-w-6xl mx-auto px-4 py-8">
-          <h1 className="text-3xl font-bold mb-2">Mobile App Reflections</h1>
+          <h1 className="text-3xl font-bold mb-2">Mobile App Reviews</h1>
           <p className="text-blue-100">
             Share your thoughts and experiences with mobile applications
           </p>
@@ -27,12 +27,12 @@ const ReflectionsPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column - Submission Form */}
           <div>
-            <ReflectionForm onSubmissionSuccess={handleSubmissionSuccess} />
+            <ReviewForm onSubmissionSuccess={handleSubmissionSuccess} />
           </div>
 
-          {/* Right Column - Reflections List */}
+          {/* Right Column - Reviews List */}
           <div>
-            <ReflectionsList key={refreshKey} />
+            <ReviewsList key={refreshKey} />
           </div>
         </div>
       </div>
@@ -40,4 +40,4 @@ const ReflectionsPage: React.FC = () => {
   );
 };
 
-export default ReflectionsPage;
+export default ReviewsPage;

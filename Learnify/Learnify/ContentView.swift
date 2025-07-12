@@ -22,16 +22,16 @@ struct ContentView: View {
                     Text("Students")
                 }
             
-            ReflectionSubmissionView()
+            ReviewSubmissionView()
                 .tabItem {
                     Image(systemName: "bubble.left.and.bubble.right")
-                    Text("Reflect")
+                    Text("Review")
                 }
             
-            ReflectionsListView()
+            ReviewsListView()
                 .tabItem {
                     Image(systemName: "list.bullet.rectangle")
-                    Text("All Reflections")
+                    Text("All Reviews")
                 }
         }
         .accentColor(.blue)

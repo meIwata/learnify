@@ -3,10 +3,10 @@ import { supabase } from '../config/supabase';
 
 const router = express.Router();
 
-// POST /api/reflections - Submit a new reflection
-router.post('/reflections', async (req: Request, res: Response) => {
+// POST /api/reviews - Submit a new review
+router.post('/reviews', async (req: Request, res: Response) => {
   try {
-    const { student_id, mobile_app_name, reflection_text } = req.body;
+    const { student_id, mobile_app_name, review_text } = req.body;
 
     // Validate required fields
     if (!student_id) {
@@ -25,11 +25,11 @@ router.post('/reflections', async (req: Request, res: Response) => {
       });
     }
 
-    if (!reflection_text || reflection_text.trim().length === 0) {
+    if (!review_text || review_text.trim().length === 0) {
       return res.status(400).json({
         success: false,
-        error: 'MISSING_REFLECTION',
-        message: 'reflection_text is required and cannot be empty'
+        error: 'MISSING_REVIEW',
+        message: 'review_text is required and cannot be empty'
       });
     }
 
@@ -48,44 +48,44 @@ router.post('/reflections', async (req: Request, res: Response) => {
       });
     }
 
-    // Insert the reflection
-    const { data: reflection, error: insertError } = await supabase
-      .from('student_reflections')
+    // Insert the review
+    const { data: review, error: insertError } = await supabase
+      .from('student_reviews')
       .insert({
         student_id: student_id,
         student_uuid: student.id,
         mobile_app_name: mobile_app_name.trim(),
-        reflection_text: reflection_text.trim()
+        review_text: review_text.trim()
       })
       .select('*')
       .single();
 
     if (insertError) {
-      console.error('Failed to create reflection:', insertError);
+      console.error('Failed to create review:', insertError);
       return res.status(500).json({
         success: false,
-        error: 'REFLECTION_CREATE_FAILED',
-        message: 'Failed to submit reflection'
+        error: 'REVIEW_CREATE_FAILED',
+        message: 'Failed to submit review'
       });
     }
 
-    console.log(`✅ Reflection submitted: ${student_id} - ${mobile_app_name}`);
+    console.log(`✅ Review submitted: ${student_id} - ${mobile_app_name}`);
 
     return res.status(201).json({
       success: true,
       data: {
-        reflection_id: reflection.id,
-        student_id: reflection.student_id,
+        review_id: review.id,
+        student_id: review.student_id,
         student_name: student.full_name,
-        mobile_app_name: reflection.mobile_app_name,
-        reflection_text: reflection.reflection_text,
-        submitted_at: reflection.created_at
+        mobile_app_name: review.mobile_app_name,
+        review_text: review.review_text,
+        submitted_at: review.created_at
       },
-      message: `Reflection on ${mobile_app_name} submitted successfully`
+      message: `Review on ${mobile_app_name} submitted successfully`
     });
 
   } catch (error) {
-    console.error('Reflection submission error:', error);
+    console.error('Review submission error:', error);
     return res.status(500).json({
       success: false,
       error: 'INTERNAL_ERROR',
@@ -94,8 +94,8 @@ router.post('/reflections', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/reflections/:student_id - Get student's reflections
-router.get('/reflections/:student_id', async (req: Request, res: Response) => {
+// GET /api/reviews/:student_id - Get student's reviews
+router.get('/reviews/:student_id', async (req: Request, res: Response) => {
   try {
     const { student_id } = req.params;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -116,31 +116,31 @@ router.get('/reflections/:student_id', async (req: Request, res: Response) => {
       });
     }
 
-    // Get reflections with pagination
-    const { data: reflections, error: reflectionsError } = await supabase
-      .from('student_reflections')
-      .select('id, mobile_app_name, reflection_text, created_at')
+    // Get reviews with pagination
+    const { data: reviews, error: reviewsError } = await supabase
+      .from('student_reviews')
+      .select('id, mobile_app_name, review_text, created_at')
       .eq('student_id', student_id)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (reflectionsError) {
-      console.error('Failed to fetch reflections:', reflectionsError);
+    if (reviewsError) {
+      console.error('Failed to fetch reviews:', reviewsError);
       return res.status(500).json({
         success: false,
-        error: 'REFLECTIONS_FETCH_FAILED',
-        message: 'Failed to fetch reflections'
+        error: 'REVIEWS_FETCH_FAILED',
+        message: 'Failed to fetch reviews'
       });
     }
 
     // Get total count
     const { count, error: countError } = await supabase
-      .from('student_reflections')
+      .from('student_reviews')
       .select('*', { count: 'exact', head: true })
       .eq('student_id', student_id);
 
     if (countError) {
-      console.error('Failed to count reflections:', countError);
+      console.error('Failed to count reviews:', countError);
     }
 
     return res.status(200).json({
@@ -151,8 +151,8 @@ router.get('/reflections/:student_id', async (req: Request, res: Response) => {
           full_name: student.full_name,
           uuid: student.id
         },
-        reflections: reflections || [],
-        total_reflections: count || 0,
+        reviews: reviews || [],
+        total_reviews: count || 0,
         showing: {
           limit,
           offset
@@ -161,7 +161,7 @@ router.get('/reflections/:student_id', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Reflections fetch error:', error);
+    console.error('Reviews fetch error:', error);
     return res.status(500).json({
       success: false,
       error: 'INTERNAL_ERROR',
@@ -170,22 +170,22 @@ router.get('/reflections/:student_id', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/reflections - Get all reflections (admin view)
-router.get('/reflections', async (req: Request, res: Response) => {
+// GET /api/reviews - Get all reviews (admin view)
+router.get('/reviews', async (req: Request, res: Response) => {
   try {
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = parseInt(req.query.offset as string) || 0;
     const app_name = req.query.app_name as string;
 
     let query = supabase
-      .from('student_reflections')
+      .from('student_reviews')
       .select(`
         id,
         student_id,
         mobile_app_name,
-        reflection_text,
+        review_text,
         created_at,
-        students!student_reflections_student_uuid_fkey (
+        students!student_reviews_student_uuid_fkey (
           full_name
         )
       `)
@@ -196,21 +196,21 @@ router.get('/reflections', async (req: Request, res: Response) => {
       query = query.ilike('mobile_app_name', `%${app_name}%`);
     }
 
-    const { data: reflections, error: reflectionsError } = await query
+    const { data: reviews, error: reviewsError } = await query
       .range(offset, offset + limit - 1);
 
-    if (reflectionsError) {
-      console.error('Failed to fetch all reflections:', reflectionsError);
+    if (reviewsError) {
+      console.error('Failed to fetch all reviews:', reviewsError);
       return res.status(500).json({
         success: false,
-        error: 'REFLECTIONS_FETCH_FAILED',
-        message: 'Failed to fetch reflections'
+        error: 'REVIEWS_FETCH_FAILED',
+        message: 'Failed to fetch reviews'
       });
     }
 
     // Get total count
     let countQuery = supabase
-      .from('student_reflections')
+      .from('student_reviews')
       .select('*', { count: 'exact', head: true });
 
     if (app_name) {
@@ -220,14 +220,14 @@ router.get('/reflections', async (req: Request, res: Response) => {
     const { count, error: countError } = await countQuery;
 
     if (countError) {
-      console.error('Failed to count reflections:', countError);
+      console.error('Failed to count reviews:', countError);
     }
 
     return res.status(200).json({
       success: true,
       data: {
-        reflections: reflections || [],
-        total_reflections: count || 0,
+        reviews: reviews || [],
+        total_reviews: count || 0,
         showing: {
           limit,
           offset,
@@ -237,7 +237,7 @@ router.get('/reflections', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('All reflections fetch error:', error);
+    console.error('All reviews fetch error:', error);
     return res.status(500).json({
       success: false,
       error: 'INTERNAL_ERROR',
@@ -246,4 +246,4 @@ router.get('/reflections', async (req: Request, res: Response) => {
   }
 });
 
-export { router as reflectionsRouter };
+export { router as reviewsRouter };

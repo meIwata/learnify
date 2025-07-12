@@ -10,7 +10,7 @@ import path from 'path';
 // import { simpleStudentCheckInRouter } from './routes/simpleStudentCheckIn';
 // import { testCheckInRouter } from './routes/testCheckIn';
 import { autoCheckInRouter } from './routes/autoCheckIn';
-import { reflectionsRouter } from './routes/reflections';
+import { reviewsRouter } from './routes/reviews';
 import { config } from './config/supabase';
 
 // Load environment variables
@@ -54,7 +54,7 @@ app.get('/health', (req: Request, res: Response) => {
 // app.use('/api', simpleStudentCheckInRouter);
 // app.use('/api', testCheckInRouter);
 app.use('/api', autoCheckInRouter);
-app.use('/api', reflectionsRouter);
+app.use('/api', reviewsRouter);
 
 // Root endpoint
 app.get('/', (req: Request, res: Response) => {

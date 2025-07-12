@@ -7,13 +7,13 @@
 
 import SwiftUI
 
-struct ReflectionsListView: View {
-    @State private var reflections: [StudentReflection] = []
+struct ReviewsListView: View {
+    @State private var reviews: [StudentReview] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showingAlert = false
     @State private var appNameFilter = ""
-    @State private var expandedReflections: Set<Int> = []
+    @State private var expandedReviews: Set<Int> = []
     
     var body: some View {
         NavigationStack {
@@ -25,13 +25,13 @@ struct ReflectionsListView: View {
                             .textFieldStyle(.roundedBorder)
                             .onSubmit {
                                 Task {
-                                    await loadReflections()
+                                    await loadReviews()
                                 }
                             }
                         
                         Button(action: {
                             Task {
-                                await loadReflections()
+                                await loadReviews()
                             }
                         }) {
                             Image(systemName: "arrow.clockwise")
@@ -54,7 +54,7 @@ struct ReflectionsListView: View {
                             Button("Clear") {
                                 appNameFilter = ""
                                 Task {
-                                    await loadReflections()
+                                    await loadReviews()
                                 }
                             }
                             .font(.caption)
@@ -69,29 +69,29 @@ struct ReflectionsListView: View {
                     VStack(spacing: 20) {
                         ProgressView()
                             .scaleEffect(1.5)
-                        Text("Loading reflections...")
+                        Text("Loading reviews...")
                             .foregroundColor(.secondary)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if reflections.isEmpty {
+                } else if reviews.isEmpty {
                     VStack(spacing: 20) {
                         Image(systemName: "bubble.left.and.bubble.right")
                             .font(.system(size: 60))
                             .foregroundColor(.gray)
                         
-                        Text("No Reflections Found")
+                        Text("No Reviews Found")
                             .font(.title2)
                             .fontWeight(.semibold)
                             .foregroundColor(.primary)
                         
-                        Text(appNameFilter.isEmpty ? "No reflections have been submitted yet." : "No reflections match your filter.")
+                        Text(appNameFilter.isEmpty ? "No reviews have been submitted yet." : "No reviews match your filter.")
                             .font(.body)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                         
                         Button("Refresh") {
                             Task {
-                                await loadReflections()
+                                await loadReviews()
                             }
                         }
                         .buttonStyle(.borderedProminent)
@@ -100,41 +100,41 @@ struct ReflectionsListView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List {
-                        ForEach(reflections, id: \.id) { reflection in
-                            ReflectionRowView(
-                                reflection: reflection,
-                                isExpanded: expandedReflections.contains(reflection.id)
+                        ForEach(reviews, id: \.id) { review in
+                            ReviewRowView(
+                                review: review,
+                                isExpanded: expandedReviews.contains(review.id)
                             ) {
-                                toggleExpanded(reflection.id)
+                                toggleExpanded(review.id)
                             }
                         }
                     }
                     .listStyle(PlainListStyle())
                     .refreshable {
-                        await loadReflections()
+                        await loadReviews()
                     }
                 }
             }
-            .navigationTitle("All Reflections")
+            .navigationTitle("All Reviews")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Refresh") {
                         Task {
-                            await loadReflections()
+                            await loadReviews()
                         }
                     }
                     .disabled(isLoading)
                 }
             }
             .task {
-                await loadReflections()
+                await loadReviews()
             }
             .alert("Error", isPresented: $showingAlert) {
                 Button("OK") { }
                 Button("Retry") {
                     Task {
-                        await loadReflections()
+                        await loadReviews()
                     }
                 }
             } message: {
@@ -144,21 +144,21 @@ struct ReflectionsListView: View {
     }
     
     private func toggleExpanded(_ id: Int) {
-        if expandedReflections.contains(id) {
-            expandedReflections.remove(id)
+        if expandedReviews.contains(id) {
+            expandedReviews.remove(id)
         } else {
-            expandedReflections.insert(id)
+            expandedReviews.insert(id)
         }
     }
     
     @MainActor
-    private func loadReflections() async {
+    private func loadReviews() async {
         isLoading = true
         errorMessage = nil
         
         do {
             let params = appNameFilter.isEmpty ? [:] : ["app_name": appNameFilter]
-            reflections = try await APIService.shared.getAllReflections(params: params)
+            reviews = try await APIService.shared.getAllReviews(params: params)
         } catch {
             errorMessage = error.localizedDescription
             showingAlert = true
@@ -168,8 +168,8 @@ struct ReflectionsListView: View {
     }
 }
 
-struct ReflectionRowView: View {
-    let reflection: StudentReflection
+struct ReviewRowView: View {
+    let review: StudentReview
     let isExpanded: Bool
     let onToggleExpanded: () -> Void
     
@@ -187,18 +187,18 @@ struct ReflectionRowView: View {
                         ))
                         .frame(width: 45, height: 45)
                     
-                    Text(getInitials(from: reflection.students?.full_name ?? reflection.student_id))
+                    Text(getInitials(from: review.students?.full_name ?? review.student_id))
                         .font(.headline)
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(reflection.students?.full_name ?? reflection.student_id)
+                    Text(review.students?.full_name ?? review.student_id)
                         .font(.headline)
                         .foregroundColor(.primary)
                     
-                    Text(reflection.student_id)
+                    Text(review.student_id)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -206,7 +206,7 @@ struct ReflectionRowView: View {
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text(reflection.mobile_app_name)
+                    Text(review.mobile_app_name)
                         .font(.caption)
                         .fontWeight(.medium)
                         .padding(.horizontal, 8)
@@ -215,27 +215,27 @@ struct ReflectionRowView: View {
                         .foregroundColor(.blue)
                         .cornerRadius(8)
                     
-                    Text(formatDate(reflection.created_at))
+                    Text(formatDate(review.created_at))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
             
-            // Reflection Text
+            // Review Text
             VStack(alignment: .leading, spacing: 8) {
                 if isExpanded {
-                    Text(reflection.reflection_text)
+                    Text(review.review_text)
                         .font(.body)
                         .foregroundColor(.primary)
                         .lineLimit(nil)
                 } else {
-                    Text(truncateText(reflection.reflection_text, maxLength: 150))
+                    Text(truncateText(review.review_text, maxLength: 150))
                         .font(.body)
                         .foregroundColor(.primary)
                         .lineLimit(3)
                 }
                 
-                if shouldShowExpand(reflection.reflection_text) {
+                if shouldShowExpand(review.review_text) {
                     Button(action: onToggleExpanded) {
                         Text(isExpanded ? "Show Less" : "Show More")
                             .font(.caption)
@@ -314,5 +314,5 @@ struct ReflectionRowView: View {
 }
 
 #Preview {
-    ReflectionsListView()
+    ReviewsListView()
 }

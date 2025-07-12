@@ -35,14 +35,14 @@ const Navigation: React.FC = () => {
               Dashboard
             </Link>
             <Link 
-              to="/reflections" 
+              to="/reviews" 
               className={`font-medium pb-1 transition-colors ${
-                isActive('/reflections') 
+                isActive('/reviews') 
                   ? 'text-blue-600 border-b-2 border-blue-600' 
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Reflections
+              Reviews
             </Link>
             <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">Courses</a>
             <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">Leaderboard</a>

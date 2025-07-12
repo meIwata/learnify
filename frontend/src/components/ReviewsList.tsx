@@ -1,43 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import { getAllReflections } from '../lib/api';
+import { getAllReviews } from '../lib/api';
 
-interface Reflection {
+interface Review {
   id: number;
   student_id: string;
   mobile_app_name: string;
-  reflection_text: string;
+  review_text: string;
   created_at: string;
   students: {
     full_name: string;
   } | null;
 }
 
-const ReflectionsList: React.FC = () => {
-  const [reflections, setReflections] = useState<Reflection[]>([]);
+const ReviewsList: React.FC = () => {
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [appNameFilter, setAppNameFilter] = useState('');
-  const [expandedReflections, setExpandedReflections] = useState<Set<number>>(new Set());
+  const [expandedReviews, setExpandedReviews] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    fetchReflections();
+    fetchReviews();
   }, [appNameFilter]);
 
-  const fetchReflections = async () => {
+  const fetchReviews = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getAllReflections({ app_name: appNameFilter || undefined });
-      setReflections(data.reflections);
+      const data = await getAllReviews({ app_name: appNameFilter || undefined });
+      setReviews(data.reviews);
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch reflections');
+      setError(err.message || 'Failed to fetch reviews');
     } finally {
       setLoading(false);
     }
   };
 
   const toggleExpanded = (id: number) => {
-    setExpandedReflections(prev => {
+    setExpandedReviews(prev => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
@@ -93,7 +93,7 @@ const ReflectionsList: React.FC = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-500">Loading reflections...</p>
+          <p className="text-gray-500">Loading reviews...</p>
         </div>
       </div>
     );
@@ -106,7 +106,7 @@ const ReflectionsList: React.FC = () => {
           <i className="fas fa-exclamation-circle text-2xl mb-2"></i>
           <p>{error}</p>
           <button
-            onClick={fetchReflections}
+            onClick={fetchReviews}
             className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
           >
             Try Again
@@ -121,8 +121,8 @@ const ReflectionsList: React.FC = () => {
       {/* Header */}
       <div className="p-6 border-b border-gray-100">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-900">App Reflections</h2>
-          <span className="text-sm text-gray-500">{reflections.length} reflections</span>
+          <h2 className="text-xl font-bold text-gray-900">App Reviews</h2>
+          <span className="text-sm text-gray-500">{reviews.length} reviews</span>
         </div>
         
         {/* Filter */}
@@ -137,7 +137,7 @@ const ReflectionsList: React.FC = () => {
             />
           </div>
           <button
-            onClick={fetchReflections}
+            onClick={fetchReviews}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <i className="fas fa-sync-alt"></i>
@@ -145,32 +145,32 @@ const ReflectionsList: React.FC = () => {
         </div>
       </div>
 
-      {/* Reflections List */}
+      {/* Reviews List */}
       <div className="p-6">
-        {reflections.length === 0 ? (
+        {reviews.length === 0 ? (
           <div className="text-center py-12">
             <i className="fas fa-comment-dots text-gray-400 text-4xl mb-4"></i>
-            <p className="text-gray-500 text-lg">No reflections found</p>
+            <p className="text-gray-500 text-lg">No reviews found</p>
             <p className="text-gray-400 text-sm mt-2">
-              {appNameFilter ? 'Try adjusting your filter' : 'Be the first to submit a reflection!'}
+              {appNameFilter ? 'Try adjusting your filter' : 'Be the first to submit a review!'}
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {reflections.map((reflection, index) => {
-              const isExpanded = expandedReflections.has(reflection.id);
-              const shouldShowExpand = reflection.reflection_text.length > 150;
+            {reviews.map((review, index) => {
+              const isExpanded = expandedReviews.has(review.id);
+              const shouldShowExpand = review.review_text.length > 150;
 
               return (
                 <div
-                  key={reflection.id}
+                  key={review.id}
                   className="border border-gray-200 rounded-lg p-4 hover:border-blue-200 transition-colors"
                 >
                   <div className="flex items-start space-x-4">
                     {/* Avatar */}
                     <div className={`w-10 h-10 bg-gradient-to-r ${getGradientColor(index)} rounded-full flex items-center justify-center flex-shrink-0`}>
                       <span className="text-white text-sm font-medium">
-                        {getInitials(reflection.students?.full_name || reflection.student_id)}
+                        {getInitials(review.students?.full_name || review.student_id)}
                       </span>
                     </div>
 
@@ -179,33 +179,33 @@ const ReflectionsList: React.FC = () => {
                       <div className="flex items-center justify-between mb-2">
                         <div>
                           <h3 className="font-semibold text-gray-900">
-                            {reflection.students?.full_name || reflection.student_id}
+                            {review.students?.full_name || review.student_id}
                           </h3>
-                          <p className="text-sm text-gray-500">{reflection.student_id}</p>
+                          <p className="text-sm text-gray-500">{review.student_id}</p>
                         </div>
                         <div className="text-right">
                           <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
-                            {reflection.mobile_app_name}
+                            {review.mobile_app_name}
                           </span>
                           <p className="text-xs text-gray-500 mt-1">
-                            {formatDate(reflection.created_at)}
+                            {formatDate(review.created_at)}
                           </p>
                         </div>
                       </div>
 
-                      {/* Reflection Text */}
+                      {/* Review Text */}
                       <div className="text-gray-700 leading-relaxed">
                         {isExpanded ? (
-                          <p className="whitespace-pre-line">{reflection.reflection_text}</p>
+                          <p className="whitespace-pre-line">{review.review_text}</p>
                         ) : (
                           <p className="whitespace-pre-line">
-                            {shouldShowExpand ? truncateText(reflection.reflection_text) : reflection.reflection_text}
+                            {shouldShowExpand ? truncateText(review.review_text) : review.review_text}
                           </p>
                         )}
                         
                         {shouldShowExpand && (
                           <button
-                            onClick={() => toggleExpanded(reflection.id)}
+                            onClick={() => toggleExpanded(review.id)}
                             className="text-blue-600 hover:text-blue-700 text-sm font-medium mt-2"
                           >
                             {isExpanded ? 'Show Less' : 'Show More'}
@@ -224,4 +224,4 @@ const ReflectionsList: React.FC = () => {
   );
 };
 
-export default ReflectionsList;
+export default ReviewsList;
