@@ -1,12 +1,18 @@
 
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const Navigation: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const location = useLocation();
+  const { studentId, logout } = useAuth();
 
   const isActive = (path: string) => location.pathname === path;
+
+  const getInitials = (studentId: string): string => {
+    return studentId.substring(0, 2).toUpperCase();
+  };
 
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200 fixed w-full top-0 z-50">
@@ -72,11 +78,11 @@ const Navigation: React.FC = () => {
                 className="flex items-center space-x-3 hover:bg-gray-50 rounded-lg p-2 transition-colors"
               >
                 <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">A</span>
+                  <span className="text-white text-sm font-medium">{getInitials(studentId || '')}</span>
                 </div>
                 <div className="hidden md:block text-left">
-                  <p className="text-sm font-medium text-gray-900">Alex Johnson</p>
-                  <p className="text-xs text-gray-500">ALEX2025</p>
+                  <p className="text-sm font-medium text-gray-900">Student</p>
+                  <p className="text-xs text-gray-500">{studentId}</p>
                 </div>
                 <i className={`fas fa-chevron-down text-gray-400 text-xs transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}></i>
               </button>
@@ -95,24 +101,19 @@ const Navigation: React.FC = () => {
                     Admin Dashboard
                   </Link>
                   <Link
-                    to="/profile"
+                    to={`/profile/${studentId}`}
                     onClick={() => setIsDropdownOpen(false)}
                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                   >
                     <i className="fas fa-user mr-3 text-gray-400"></i>
                     My Profile
                   </Link>
-                  <Link
-                    to="/settings"
-                    onClick={() => setIsDropdownOpen(false)}
-                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    <i className="fas fa-cog mr-3 text-gray-400"></i>
-                    Settings
-                  </Link>
                   <hr className="my-2" />
                   <button
-                    onClick={() => setIsDropdownOpen(false)}
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      logout();
+                    }}
                     className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                   >
                     <i className="fas fa-sign-out-alt mr-3 text-red-400"></i>
