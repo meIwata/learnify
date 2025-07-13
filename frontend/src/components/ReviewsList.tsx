@@ -1,19 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { getAllReviews } from '../lib/api';
+import type { StudentReview } from '../lib/api';
 
-interface Review {
-  id: number;
-  student_id: string;
-  mobile_app_name: string;
-  review_text: string;
-  created_at: string;
-  students: {
-    full_name: string;
-  } | null;
-}
 
 const ReviewsList: React.FC = () => {
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<StudentReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [appNameFilter, setAppNameFilter] = useState('');

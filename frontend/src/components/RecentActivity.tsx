@@ -44,7 +44,7 @@ const RecentActivity: React.FC = () => {
             activityList.push({
               id: `review-${index}`,
               type: 'review',
-              title: `App review submitted: ${review.app_name}`,
+              title: `App review submitted: ${review.mobile_app_name}`,
               description: '+10 points',
               timestamp: review.created_at,
               points: 10
@@ -97,8 +97,6 @@ const RecentActivity: React.FC = () => {
         return { icon: 'fas fa-circle', bgColor: 'bg-gray-100', textColor: 'text-gray-600' };
     }
   };
-
-const RecentActivity: React.FC = () => {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100">
       <div className="p-6 border-b border-gray-100">
@@ -150,8 +148,6 @@ const RecentActivity: React.FC = () => {
       </div>
     </div>
   );
-};
-
 };
 
 export default RecentActivity; 
