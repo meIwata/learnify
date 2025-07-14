@@ -1,12 +1,29 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { getAdminStatus } from '../lib/api';
 
 const Navigation: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
   const { studentId, logout } = useAuth();
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!studentId) return;
+      
+      try {
+        await getAdminStatus(studentId);
+        setIsAdmin(true);
+      } catch (error) {
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [studentId]);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -81,7 +98,7 @@ const Navigation: React.FC = () => {
                   <span className="text-white text-sm font-medium">{getInitials(studentId || '')}</span>
                 </div>
                 <div className="hidden md:block text-left">
-                  <p className="text-sm font-medium text-gray-900">Student</p>
+                  <p className="text-sm font-medium text-gray-900">{isAdmin ? 'Teacher' : 'Student'}</p>
                   <p className="text-xs text-gray-500">{studentId}</p>
                 </div>
                 <i className={`fas fa-chevron-down text-gray-400 text-xs transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}></i>
@@ -90,16 +107,18 @@ const Navigation: React.FC = () => {
               {/* Dropdown Menu */}
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                  <Link
-                    to="/admin"
-                    onClick={() => setIsDropdownOpen(false)}
-                    className={`flex items-center px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
-                      isActive('/admin') ? 'text-blue-600 bg-blue-50' : 'text-gray-700'
-                    }`}
-                  >
-                    <i className="fas fa-cog mr-3 text-gray-400"></i>
-                    Admin Dashboard
-                  </Link>
+                  {isAdmin && (
+                    <Link
+                      to="/admin"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className={`flex items-center px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                        isActive('/admin') ? 'text-blue-600 bg-blue-50' : 'text-gray-700'
+                      }`}
+                    >
+                      <i className="fas fa-chalkboard-teacher mr-3 text-gray-400"></i>
+                      Teacher Dashboard
+                    </Link>
+                  )}
                   <Link
                     to={`/profile/${studentId}`}
                     onClick={() => setIsDropdownOpen(false)}

@@ -16,6 +16,7 @@ export interface Student {
   full_name: string;
   created_at: string;
   updated_at: string;
+  is_admin?: boolean;
 }
 
 export interface CheckInRequest {
@@ -150,6 +151,45 @@ export const getLeaderboard = async (limit: number = 50, offset: number = 0): Pr
     throw new Error('Failed to fetch leaderboard');
   }
   return response.data.data.leaderboard;
+};
+
+// Admin API functions
+export interface AdminStatus {
+  admin: Student;
+  permissions: string[];
+}
+
+export const getAdminStatus = async (studentId: string): Promise<AdminStatus> => {
+  const response = await api.get<{success: boolean, data: AdminStatus}>('/api/admin/status', {
+    headers: { 'x-student-id': studentId }
+  });
+  if (!response.data.success) {
+    throw new Error('Failed to get admin status');
+  }
+  return response.data.data;
+};
+
+export const getAllStudentsAsAdmin = async (studentId: string): Promise<Student[]> => {
+  const response = await api.get<{success: boolean, data: Student[]}>('/api/admin/students', {
+    headers: { 'x-student-id': studentId }
+  });
+  if (!response.data.success) {
+    throw new Error('Failed to fetch students');
+  }
+  return response.data.data;
+};
+
+export const deleteStudent = async (adminStudentId: string, targetStudentId: string): Promise<{message: string, deleted_student: Student}> => {
+  const response = await api.delete<{success: boolean, message: string, data: {deleted_student: Student}}>(`/api/admin/students/${targetStudentId}`, {
+    headers: { 'x-student-id': adminStudentId }
+  });
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Failed to delete student');
+  }
+  return {
+    message: response.data.message,
+    deleted_student: response.data.data.deleted_student
+  };
 };
 
 export default api;

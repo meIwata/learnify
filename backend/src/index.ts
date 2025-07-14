@@ -12,6 +12,7 @@ import path from 'path';
 import { autoCheckInRouter } from './routes/autoCheckIn';
 import { reviewsRouter } from './routes/reviews';
 import leaderboardRouter from './routes/leaderboard';
+import adminRouter from './routes/admin';
 import { config } from './config/supabase';
 
 // Load environment variables
@@ -24,7 +25,7 @@ app.use(helmet());
 app.use(cors({
   origin: '*', // Allow all origins
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With', 'x-student-id']
 }));
 
 // Body parsing middleware
@@ -57,6 +58,7 @@ app.get('/health', (req: Request, res: Response) => {
 app.use('/api', autoCheckInRouter);
 app.use('/api', reviewsRouter);
 app.use('/api', leaderboardRouter);
+app.use('/api/admin', adminRouter);
 
 // Root endpoint
 app.get('/', (req: Request, res: Response) => {
