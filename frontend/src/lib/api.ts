@@ -192,4 +192,105 @@ export const deleteStudent = async (adminStudentId: string, targetStudentId: str
   };
 };
 
+// Lessons interfaces
+export interface LessonPlanItem {
+  id: string;
+  title: string;
+  required: boolean;
+  completed: boolean;
+}
+
+export interface Lesson {
+  id: string;
+  lesson_number: number;
+  name: string;
+  description: string;
+  scheduled_date: string;
+  status: 'normal' | 'skipped' | 'cancelled';
+  topic_name: string;
+  icon: string;
+  color: string;
+  button_color: string;
+  further_reading_url?: string;
+  lesson_content?: string[];
+  created_at: string;
+  updated_at: string;
+  plan?: LessonPlanItem[];
+}
+
+export interface LessonsResponse {
+  success: boolean;
+  data: Lesson[];
+}
+
+export interface LessonResponse {
+  success: boolean;
+  data: Lesson;
+}
+
+// Lessons API functions
+export const getAllLessons = async (params?: { status?: string; include_plan?: boolean }): Promise<Lesson[]> => {
+  const response = await api.get<LessonsResponse>('/api/lessons', { params });
+  if (!response.data.success) {
+    throw new Error('Failed to fetch lessons');
+  }
+  return response.data.data;
+};
+
+export const getCurrentLesson = async (): Promise<Lesson | null> => {
+  const response = await api.get<LessonResponse>('/api/lessons/current');
+  if (!response.data.success) {
+    throw new Error('Failed to fetch current lesson');
+  }
+  return response.data.data;
+};
+
+export const getLesson = async (lessonId: string): Promise<Lesson> => {
+  const response = await api.get<LessonResponse>(`/api/lessons/${lessonId}`);
+  if (!response.data.success) {
+    throw new Error('Failed to fetch lesson');
+  }
+  return response.data.data;
+};
+
+export const updateLessonStatus = async (lessonId: string, status: 'normal' | 'skipped' | 'cancelled'): Promise<Lesson> => {
+  const response = await api.put<LessonResponse>(`/api/lessons/${lessonId}/status`, { status });
+  if (!response.data.success) {
+    throw new Error('Failed to update lesson status');
+  }
+  return response.data.data;
+};
+
+export const updateLessonProgress = async (
+  lessonId: string, 
+  teacherId: string, 
+  lessonPlanItemId: string, 
+  completed: boolean
+): Promise<any> => {
+  const response = await api.post(`/api/lessons/${lessonId}/progress`, {
+    teacher_id: teacherId,
+    lesson_plan_item_id: lessonPlanItemId,
+    completed
+  });
+  if (!response.data.success) {
+    throw new Error('Failed to update lesson progress');
+  }
+  return response.data.data;
+};
+
+export const updateLessonUrl = async (
+  lessonId: string,
+  teacherId: string,
+  furtherReadingUrl: string
+): Promise<Lesson> => {
+  const response = await api.put<LessonResponse>(`/api/lessons/${lessonId}/url`, {
+    teacher_id: teacherId,
+    further_reading_url: furtherReadingUrl
+  });
+  if (!response.data.success) {
+    throw new Error('Failed to update lesson URL');
+  }
+  return response.data.data;
+};
+
 export default api;

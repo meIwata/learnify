@@ -67,7 +67,16 @@ const Navigation: React.FC = () => {
             >
               Reviews
             </Link>
-            <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">Courses</a>
+            <Link 
+              to="/lessons" 
+              className={`font-medium pb-1 transition-colors ${
+                isActive('/lessons') 
+                  ? 'text-blue-600 border-b-2 border-blue-600' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Lessons
+            </Link>
             <Link 
               to="/leaderboard" 
               className={`font-medium pb-1 transition-colors ${

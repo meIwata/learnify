@@ -40,6 +40,7 @@ coverage/
 # Database dumps
 *.sql
 *.dump
+!supabase/migrations/*.sql
 
 # Configuration files with secrets
 config.json

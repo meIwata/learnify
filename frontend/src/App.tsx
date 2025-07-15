@@ -8,6 +8,7 @@ import AdminPage from './pages/AdminPage';
 import ReviewsPage from './pages/ReviewsPage';
 import ProfilePage from './components/ProfilePage';
 import LeaderboardPage from './pages/LeaderboardPage';
+import LessonsPage from './pages/LessonsPage';
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -24,6 +25,7 @@ function AppRoutes() {
           <Route path="/" element={<HomePage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/reviews" element={<ReviewsPage />} />
+          <Route path="/lessons" element={<LessonsPage />} />
           <Route path="/profile/:studentId" element={<ProfilePage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
         </Routes>

@@ -13,6 +13,7 @@ import { autoCheckInRouter } from './routes/autoCheckIn';
 import { reviewsRouter } from './routes/reviews';
 import leaderboardRouter from './routes/leaderboard';
 import adminRouter from './routes/admin';
+import lessonsRouter from './routes/lessons';
 import { config } from './config/supabase';
 
 // Load environment variables
@@ -59,6 +60,7 @@ app.use('/api', autoCheckInRouter);
 app.use('/api', reviewsRouter);
 app.use('/api', leaderboardRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/lessons', lessonsRouter);
 
 // Root endpoint
 app.get('/', (req: Request, res: Response) => {

@@ -1,6 +1,6 @@
 import WelcomeSection from '../components/WelcomeSection';
 import QuickStats from '../components/QuickStats';
-import CurrentCourses from '../components/CurrentCourses';
+import CurrentLessons from '../components/CurrentLessons';
 import RecentActivity from '../components/RecentActivity';
 import QuickActions from '../components/QuickActions';
 import Leaderboard from '../components/Leaderboard';
@@ -20,7 +20,7 @@ const HomePage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left Column */}
             <div className="lg:col-span-2 space-y-8">
-              <CurrentCourses />
+              <CurrentLessons />
               <RecentActivity />
               <QuickActions />
             </div>
