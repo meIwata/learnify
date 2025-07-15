@@ -10,34 +10,22 @@ import SwiftUI
 struct ContentView: View {
     var body: some View {
         TabView {
+            DashboardView()
+                .tabItem {
+                    Image(systemName: "house")
+                    Text("Dashboard")
+                }
+            
             CheckInView()
                 .tabItem {
                     Image(systemName: "checkmark.circle")
                     Text("Check In")
                 }
             
-            StudentsListView()
-                .tabItem {
-                    Image(systemName: "person.3")
-                    Text("Students")
-                }
-            
             ReviewSubmissionView()
                 .tabItem {
                     Image(systemName: "bubble.left.and.bubble.right")
                     Text("Review")
-                }
-            
-            ReviewsListView()
-                .tabItem {
-                    Image(systemName: "list.bullet.rectangle")
-                    Text("All Reviews")
-                }
-            
-            LeaderboardView()
-                .tabItem {
-                    Image(systemName: "trophy.fill")
-                    Text("Leaderboard")
                 }
             
             SettingsView()
