@@ -459,6 +459,294 @@ final class APIService: NSObject, URLSessionTaskDelegate {
         }
         throw lastError ?? APIError.networkError("Failed to fetch student reviews after multiple retries.")
     }
+    
+    // MARK: - Lessons
+    func getCurrentLesson(includePlan: Bool = true) async throws -> LessonDetail? {
+        var urlComponents = URLComponents(string: "\(baseURL)/api/lessons/current")!
+        if includePlan {
+            urlComponents.queryItems = [URLQueryItem(name: "include_plan", value: "true")]
+        }
+        
+        guard let url = urlComponents.url else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        print("📤 Fetching current lesson")
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        config.timeoutIntervalForResource = 60.0
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.httpMaximumConnectionsPerHost = 1
+        let session = URLSession(configuration: config)
+
+        let maxRetries = 3
+        var lastError: Error?
+
+        for attempt in 1...maxRetries {
+            do {
+                print("🔄 Current lesson request attempt \(attempt)/\(maxRetries)")
+                let (data, response) = try await session.data(for: request)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    print("❌ Invalid response type for current lesson")
+                    throw APIError.invalidResponse
+                }
+                
+                print("✅ Current lesson HTTP Status: \(httpResponse.statusCode)")
+                
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    print("❌ Current lesson server error: \(httpResponse.statusCode)")
+                    throw APIError.serverError(httpResponse.statusCode)
+                }
+                
+                let lessonResponse = try JSONDecoder().decode(CurrentLessonResponse.self, from: data)
+                print("✅ Successfully fetched current lesson: \(lessonResponse.data?.name ?? "None")")
+                return lessonResponse.data
+                
+            } catch let error as URLError where error.code == .networkConnectionLost && attempt < maxRetries {
+                print("⚠️ Network connection lost fetching current lesson (Attempt \(attempt)/\(maxRetries)). Error: \(error)")
+                lastError = error
+                try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                continue
+            } catch {
+                print("❌ Current lesson request failed with error: \(error)")
+                throw error
+            }
+        }
+        throw lastError ?? APIError.networkError("Failed to fetch current lesson after multiple retries.")
+    }
+    
+    func getAllLessons(status: String? = nil, includePlan: Bool = true) async throws -> [LessonDetail] {
+        var urlComponents = URLComponents(string: "\(baseURL)/api/lessons")!
+        
+        var queryItems: [URLQueryItem] = []
+        if let status = status {
+            queryItems.append(URLQueryItem(name: "status", value: status))
+        }
+        if includePlan {
+            queryItems.append(URLQueryItem(name: "include_plan", value: "true"))
+        }
+        
+        if !queryItems.isEmpty {
+            urlComponents.queryItems = queryItems
+        }
+        
+        guard let url = urlComponents.url else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        print("📤 Fetching all lessons")
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        config.timeoutIntervalForResource = 60.0
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.httpMaximumConnectionsPerHost = 1
+        let session = URLSession(configuration: config)
+
+        let maxRetries = 3
+        var lastError: Error?
+
+        for attempt in 1...maxRetries {
+            do {
+                print("🔄 All lessons request attempt \(attempt)/\(maxRetries)")
+                let (data, response) = try await session.data(for: request)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    print("❌ Invalid response type for lessons")
+                    throw APIError.invalidResponse
+                }
+                
+                print("✅ All lessons HTTP Status: \(httpResponse.statusCode)")
+                
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    print("❌ All lessons server error: \(httpResponse.statusCode)")
+                    throw APIError.serverError(httpResponse.statusCode)
+                }
+                
+                let lessonsResponse = try JSONDecoder().decode(LessonsResponse.self, from: data)
+                print("✅ Successfully fetched \(lessonsResponse.data.count) lessons")
+                return lessonsResponse.data
+                
+            } catch let error as URLError where error.code == .networkConnectionLost && attempt < maxRetries {
+                print("⚠️ Network connection lost fetching lessons (Attempt \(attempt)/\(maxRetries)). Error: \(error)")
+                lastError = error
+                try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                continue
+            } catch {
+                print("❌ Lessons request failed with error: \(error)")
+                throw error
+            }
+        }
+        throw lastError ?? APIError.networkError("Failed to fetch lessons after multiple retries.")
+    }
+    
+    func getLesson(id: String, includePlan: Bool = true) async throws -> LessonDetail? {
+        var urlComponents = URLComponents(string: "\(baseURL)/api/lessons/\(id)")!
+        if includePlan {
+            urlComponents.queryItems = [URLQueryItem(name: "include_plan", value: "true")]
+        }
+        
+        guard let url = urlComponents.url else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        print("📤 Fetching lesson \(id)")
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        config.timeoutIntervalForResource = 60.0
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.httpMaximumConnectionsPerHost = 1
+        let session = URLSession(configuration: config)
+
+        let maxRetries = 3
+        var lastError: Error?
+
+        for attempt in 1...maxRetries {
+            do {
+                print("🔄 Lesson \(id) request attempt \(attempt)/\(maxRetries)")
+                let (data, response) = try await session.data(for: request)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    print("❌ Invalid response type for lesson \(id)")
+                    throw APIError.invalidResponse
+                }
+                
+                print("✅ Lesson \(id) HTTP Status: \(httpResponse.statusCode)")
+                
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    print("❌ Lesson \(id) server error: \(httpResponse.statusCode)")
+                    throw APIError.serverError(httpResponse.statusCode)
+                }
+                
+                let lessonResponse = try JSONDecoder().decode(LessonResponse.self, from: data)
+                print("✅ Successfully fetched lesson \(id): \(lessonResponse.data?.name ?? "Not found")")
+                return lessonResponse.data
+                
+            } catch let error as URLError where error.code == .networkConnectionLost && attempt < maxRetries {
+                print("⚠️ Network connection lost fetching lesson \(id) (Attempt \(attempt)/\(maxRetries)). Error: \(error)")
+                lastError = error
+                try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                continue
+            } catch {
+                print("❌ Lesson \(id) request failed with error: \(error)")
+                throw error
+            }
+        }
+        throw lastError ?? APIError.networkError("Failed to fetch lesson \(id) after multiple retries.")
+    }
+    
+    // MARK: - Admin/Teacher Lesson Management
+    
+    func updateLessonStatus(id: Int, status: String, authToken: String) async throws -> LessonDetail {
+        let url = URL(string: "\(baseURL)/api/lessons/\(id)/status")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        
+        let statusUpdate = LessonStatusUpdate(status: status)
+        request.httpBody = try JSONEncoder().encode(statusUpdate)
+        
+        print("📤 Updating lesson \(id) status to \(status)")
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        let session = URLSession(configuration: config)
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+        
+        let updateResponse = try JSONDecoder().decode(LessonUpdateResponse.self, from: data)
+        print("✅ Successfully updated lesson \(id) status")
+        return updateResponse.data.lesson
+    }
+    
+    func updateLessonURL(id: Int, url: String, authToken: String) async throws -> LessonDetail {
+        let requestURL = URL(string: "\(baseURL)/api/lessons/\(id)/url")!
+        var request = URLRequest(url: requestURL)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        
+        let urlUpdate = LessonURLUpdate(further_reading_url: url)
+        request.httpBody = try JSONEncoder().encode(urlUpdate)
+        
+        print("📤 Updating lesson \(id) URL")
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        let session = URLSession(configuration: config)
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+        
+        let updateResponse = try JSONDecoder().decode(LessonUpdateResponse.self, from: data)
+        print("✅ Successfully updated lesson \(id) URL")
+        return updateResponse.data.lesson
+    }
+    
+    func updateLessonProgress(lessonId: Int, planItemId: Int, completed: Bool, authToken: String) async throws -> LessonProgressUpdate {
+        let url = URL(string: "\(baseURL)/api/lessons/\(lessonId)/progress")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        
+        let progressUpdate = LessonProgressRequest(lesson_plan_item_id: planItemId, completed: completed)
+        request.httpBody = try JSONEncoder().encode(progressUpdate)
+        
+        print("📤 Updating lesson \(lessonId) progress for item \(planItemId)")
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        let session = URLSession(configuration: config)
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+        
+        let updateResponse = try JSONDecoder().decode(LessonProgressResponse.self, from: data)
+        print("✅ Successfully updated lesson progress")
+        return updateResponse.data.progress
+    }
 }
 
 // MARK: - Data Models
@@ -629,4 +917,114 @@ struct LeaderboardPagination: Codable {
     let offset: Int
     let total_pages: Int?
     let current_page: Int?
+}
+
+// MARK: - Lesson Data Models
+
+struct LessonDetail: Codable, Identifiable {
+    let id: String
+    let lesson_number: Int
+    let name: String
+    let description: String?
+    let scheduled_date: String
+    let status: String
+    let topic_name: String?
+    let icon: String?
+    let color: String?
+    let button_color: String?
+    let further_reading_url: String?
+    let lesson_content: [String]?
+    let created_at: String
+    let updated_at: String
+    let plan: [LessonPlanItem]?
+    let completion_percentage: Double?
+    
+    // Computed properties for compatibility with existing code
+    var lesson_plan_items: [LessonPlanItem]? {
+        return plan
+    }
+    
+    var lesson_content_string: String? {
+        return lesson_content?.joined(separator: "\n")
+    }
+}
+
+struct LessonPlanItem: Codable, Identifiable {
+    let id: String?
+    let title: String?
+    let required: Bool?
+    let completed: Bool?
+    
+    // Computed properties for compatibility with existing code
+    var is_required: Bool {
+        return required ?? false
+    }
+    var lesson_id: Int { return 0 } // Not provided by backend
+    var sort_order: Int { return 0 } // Not provided by backend
+    var created_at: String { return "" } // Not provided by backend
+    var completed_at: String? { return nil } // Not provided by backend
+    
+    // Generate a fallback ID for Identifiable conformance
+    var identifiableId: String {
+        return id ?? UUID().uuidString
+    }
+}
+
+struct CurrentLessonResponse: Codable {
+    let success: Bool
+    let data: LessonDetail?
+}
+
+struct LessonsResponse: Codable {
+    let success: Bool
+    let data: [LessonDetail]
+}
+
+struct LessonResponse: Codable {
+    let success: Bool
+    let data: LessonDetail?
+}
+
+// MARK: - Admin/Teacher Request Models
+
+struct LessonStatusUpdate: Codable {
+    let status: String
+}
+
+struct LessonURLUpdate: Codable {
+    let further_reading_url: String
+}
+
+struct LessonProgressRequest: Codable {
+    let lesson_plan_item_id: Int
+    let completed: Bool
+}
+
+// MARK: - Admin/Teacher Response Models
+
+struct LessonUpdateResponse: Codable {
+    let success: Bool
+    let data: LessonUpdateData
+    let message: String
+}
+
+struct LessonUpdateData: Codable {
+    let lesson: LessonDetail
+}
+
+struct LessonProgressResponse: Codable {
+    let success: Bool
+    let data: LessonProgressData
+    let message: String
+}
+
+struct LessonProgressData: Codable {
+    let progress: LessonProgressUpdate
+}
+
+struct LessonProgressUpdate: Codable {
+    let lesson_plan_item_id: Int
+    let completed: Bool
+    let completed_at: String?
+    let completed_by_teacher_id: String?
 }

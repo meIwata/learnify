@@ -22,6 +22,12 @@ struct ContentView: View {
                     Text("Check In")
                 }
             
+            LessonView()
+                .tabItem {
+                    Image(systemName: "book")
+                    Text("Lesson")
+                }
+            
             ReviewSubmissionView()
                 .tabItem {
                     Image(systemName: "bubble.left.and.bubble.right")
