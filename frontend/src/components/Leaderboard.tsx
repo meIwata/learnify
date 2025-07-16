@@ -8,21 +8,28 @@ const Leaderboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        setLoading(true);
-        const leaderboardData = await getLeaderboard();
-        setLeaderboard(leaderboardData);
-      } catch (err) {
-        setError('Failed to fetch leaderboard');
-        console.error('Error fetching leaderboard:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchLeaderboard = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const leaderboardData = await getLeaderboard();
+      setLeaderboard(leaderboardData);
+    } catch (err) {
+      setError('Failed to fetch leaderboard');
+      console.error('Error fetching leaderboard:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchLeaderboard();
+
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(fetchLeaderboard, 30000);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(interval);
   }, []);
 
   const getInitials = (name: string): string => {
@@ -118,7 +125,16 @@ const Leaderboard: React.FC = () => {
       <div className="p-6 border-b border-gray-100">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">🏆 Leaderboard</h3>
-          <span className="text-sm text-gray-500">{leaderboard.length} students ranked</span>
+          <div className="flex items-center space-x-3">
+            <span className="text-sm text-gray-500">{leaderboard.length} students ranked</span>
+            <button
+              onClick={fetchLeaderboard}
+              disabled={loading}
+              className="px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-full hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {loading ? '🔄' : '↻'} Refresh
+            </button>
+          </div>
         </div>
       </div>
 

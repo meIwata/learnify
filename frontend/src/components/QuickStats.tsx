@@ -13,38 +13,47 @@ const QuickStats: React.FC = () => {
   const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  const refreshStats = async () => {
+    if (!studentId) return;
+
+    try {
+      // Fetch check-ins
+      const checkIns = await getStudentCheckIns(studentId);
+      setCheckInsCount(checkIns.length);
+
+      // Check if user has checked in today
+      const today = new Date().toDateString();
+      const hasCheckedToday = checkIns.some(checkIn => {
+        const checkInDate = new Date(checkIn.created_at).toDateString();
+        return checkInDate === today;
+      });
+      setHasCheckedInToday(hasCheckedToday);
+
+      // Fetch leaderboard for updated total marks
+      const leaderboard = await getLeaderboard();
+      const userEntry = leaderboard.find(entry => entry.student_id === studentId);
+      setTotalMarks(userEntry?.total_marks || 0);
+
+      // Fetch reviews
+      try {
+        const reviewsData = await getStudentReviews(studentId);
+        setReviewsCount(reviewsData.data.reviews.length);
+      } catch (error) {
+        console.log('No reviews found, setting to 0');
+        setReviewsCount(0);
+      }
+    } catch (error) {
+      console.error('Error refreshing stats:', error);
+    }
+  };
+
   useEffect(() => {
     const fetchUserStats = async () => {
       if (!studentId) return;
 
       try {
         setIsLoading(true);
-
-        // Fetch check-ins
-        const checkIns = await getStudentCheckIns(studentId);
-        setCheckInsCount(checkIns.length);
-
-        // Check if user has checked in today
-        const today = new Date().toDateString();
-        const hasCheckedToday = checkIns.some(checkIn => {
-          const checkInDate = new Date(checkIn.created_at).toDateString();
-          return checkInDate === today;
-        });
-        setHasCheckedInToday(hasCheckedToday);
-
-        // Fetch leaderboard for total marks
-        const leaderboard = await getLeaderboard();
-        const userEntry = leaderboard.find(entry => entry.student_id === studentId);
-        setTotalMarks(userEntry?.total_marks || 0);
-
-        // Fetch reviews
-        try {
-          const reviewsData = await getStudentReviews(studentId);
-          setReviewsCount(reviewsData.data.reviews.length);
-        } catch (error) {
-          console.log('No reviews found, setting to 0');
-          setReviewsCount(0);
-        }
+        await refreshStats();
       } catch (error) {
         console.error('Error fetching user stats:', error);
       } finally {
@@ -61,9 +70,8 @@ const QuickStats: React.FC = () => {
     setIsCheckingIn(true);
     try {
       await checkInStudent({ student_id: studentId });
-      setHasCheckedInToday(true);
-      setCheckInsCount(prev => prev + 1);
-      setTotalMarks(prev => prev + 10); // Assuming 10 points per check-in
+      // Refresh all stats from server to get accurate data
+      await refreshStats();
     } catch (error) {
       console.error('Check-in failed:', error);
     } finally {
