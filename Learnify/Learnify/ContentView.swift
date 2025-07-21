@@ -28,6 +28,12 @@ struct ContentView: View {
                     Text("Lesson")
                 }
             
+            SubmissionView()
+                .tabItem {
+                    Image(systemName: "arrow.up.doc")
+                    Text("Submit")
+                }
+            
             ReviewSubmissionView()
                 .tabItem {
                     Image(systemName: "bubble.left.and.bubble.right")

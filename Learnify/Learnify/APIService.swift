@@ -650,6 +650,114 @@ final class APIService: NSObject, URLSessionTaskDelegate {
         throw lastError ?? APIError.networkError("Failed to fetch lesson \(id) after multiple retries.")
     }
     
+    // MARK: - Submissions
+    func submitSubmission(studentId: String, fullName: String, submissionType: String, title: String, description: String?, githubURL: String?, imageData: Data?) async throws -> SubmissionResponse {
+        let url = URL(string: "\(baseURL)/api/submissions")!
+        
+        // Create multipart form data
+        let boundary = UUID().uuidString
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 60 // Longer timeout for file uploads
+        
+        var body = Data()
+        
+        // Add form fields
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"student_id\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(studentId)\r\n".data(using: .utf8)!)
+        
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"full_name\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(fullName)\r\n".data(using: .utf8)!)
+        
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"submission_type\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(submissionType)\r\n".data(using: .utf8)!)
+        
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"title\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(title)\r\n".data(using: .utf8)!)
+        
+        if let description = description {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"description\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(description)\r\n".data(using: .utf8)!)
+        }
+        
+        if let githubURL = githubURL {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"github_url\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(githubURL)\r\n".data(using: .utf8)!)
+        }
+        
+        // Add file data if present
+        if let imageData = imageData {
+            let fileName = "submission_\(studentId)_\(Date().timeIntervalSince1970).jpg"
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
+            body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+            body.append(imageData)
+            body.append("\r\n".data(using: .utf8)!)
+        }
+        
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        
+        request.httpBody = body
+        
+        print("📤 Submitting submission: \(studentId) - \(title)")
+        print("📤 Submission type: \(submissionType)")
+        print("📤 File size: \(imageData?.count ?? 0) bytes")
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 60.0
+        config.timeoutIntervalForResource = 120.0
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.httpMaximumConnectionsPerHost = 1
+        let session = URLSession(configuration: config)
+
+        let maxRetries = 3
+        var lastError: Error?
+
+        for attempt in 1...maxRetries {
+            do {
+                print("🔄 Submission attempt \(attempt)/\(maxRetries)")
+                let (data, response) = try await session.data(for: request)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    print("❌ Invalid response type for submission")
+                    throw APIError.invalidResponse
+                }
+                
+                print("✅ Submission HTTP Status: \(httpResponse.statusCode)")
+                
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    print("❌ Submission server error: \(httpResponse.statusCode)")
+                    if let responseString = String(data: data, encoding: .utf8) {
+                        print("❌ Response body: \(responseString)")
+                    }
+                    throw APIError.serverError(httpResponse.statusCode)
+                }
+                
+                let submissionResponse = try JSONDecoder().decode(SubmissionResponse.self, from: data)
+                print("✅ Submission uploaded successfully")
+                return submissionResponse
+                
+            } catch let error as URLError where error.code == .networkConnectionLost && attempt < maxRetries {
+                print("⚠️ Network connection lost submitting (Attempt \(attempt)/\(maxRetries)). Error: \(error)")
+                lastError = error
+                try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                continue
+            } catch {
+                print("❌ Submission failed with error: \(error)")
+                throw error
+            }
+        }
+        throw lastError ?? APIError.networkError("Failed to submit after multiple retries.")
+    }
+    
     // MARK: - Admin/Teacher Lesson Management
     
     func updateLessonStatus(id: Int, status: String, authToken: String) async throws -> LessonDetail {
@@ -1027,4 +1135,34 @@ struct LessonProgressUpdate: Codable {
     let completed: Bool
     let completed_at: String?
     let completed_by_teacher_id: String?
+}
+
+// MARK: - Submission Data Models
+
+struct SubmissionResponse: Codable {
+    let success: Bool
+    let data: SubmissionData
+    let message: String
+}
+
+struct SubmissionData: Codable {
+    let submission: Submission
+}
+
+struct Submission: Codable, Identifiable {
+    let id: Int
+    let student_id: String
+    let submission_type: String
+    let title: String
+    let description: String?
+    let file_path: String?
+    let file_name: String?
+    let file_size: Int?
+    let mime_type: String?
+    let github_url: String?
+    let lesson_id: String?
+    let file_url: String?
+    let student_name: String?
+    let created_at: String
+    let updated_at: String
 }

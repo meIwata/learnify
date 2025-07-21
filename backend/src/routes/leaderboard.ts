@@ -13,6 +13,103 @@ interface LeaderboardEntry {
 }
 
 /**
+ * Shared function to get leaderboard data
+ */
+async function getLeaderboardData(): Promise<LeaderboardEntry[]> {
+  // Query to get leaderboard data with scores calculated
+  const { data: leaderboardData, error } = await supabase
+    .from('students')
+    .select(`
+      student_id,
+      full_name,
+      created_at,
+      student_check_ins (
+        id,
+        created_at
+      ),
+      student_reviews (
+        id,
+        created_at
+      )
+    `)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Database error:', error);
+    throw new Error('Failed to fetch leaderboard data');
+  }
+
+  if (!leaderboardData) {
+    return [];
+  }
+
+  // Calculate scores and prepare leaderboard entries
+  const leaderboardEntries: Omit<LeaderboardEntry, 'rank'>[] = leaderboardData.map(student => {
+    const checkIns = student.student_check_ins || [];
+    const reviews = student.student_reviews || [];
+    const totalCheckIns = checkIns.length;
+    const totalReviews = reviews.length;
+    
+    // Scoring: 10 marks for check-ins (if any), 10 marks for app review (if any)
+    let totalMarks = 0;
+    if (totalCheckIns > 0) totalMarks += 10; // Check-in marks
+    if (totalReviews > 0) totalMarks += 10;  // App review marks
+    
+    // Find latest check-in
+    const latestCheckIn = checkIns.length > 0 
+      ? checkIns.reduce((latest, current) => 
+          new Date(current.created_at) > new Date(latest.created_at) ? current : latest
+        ).created_at
+      : null;
+
+    return {
+      student_id: student.student_id,
+      full_name: student.full_name,
+      total_marks: totalMarks,
+      total_check_ins: totalCheckIns,
+      latest_check_in: latestCheckIn
+    };
+  });
+
+  // Sort by ranking criteria
+  const sortedEntries = leaderboardEntries.sort((a, b) => {
+    // Primary: Total marks (descending)
+    if (a.total_marks !== b.total_marks) {
+      return b.total_marks - a.total_marks;
+    }
+    
+    // Tiebreaker 1: Number of check-ins (descending)
+    if (a.total_check_ins !== b.total_check_ins) {
+      return b.total_check_ins - a.total_check_ins;
+    }
+    
+    // Tiebreaker 2: Most recent check-in (more recent first)
+    if (a.latest_check_in && b.latest_check_in) {
+      const dateA = new Date(a.latest_check_in);
+      const dateB = new Date(b.latest_check_in);
+      if (dateA.getTime() !== dateB.getTime()) {
+        return dateB.getTime() - dateA.getTime();
+      }
+    } else if (a.latest_check_in && !b.latest_check_in) {
+      return -1;
+    } else if (!a.latest_check_in && b.latest_check_in) {
+      return 1;
+    }
+    
+    // Tiebreaker 3: Alphabetical by name
+    return a.full_name.localeCompare(b.full_name);
+  });
+
+  // Add rank numbers
+  const rankedEntries: LeaderboardEntry[] = sortedEntries.map((entry, index) => ({
+    ...entry,
+    rank: index + 1
+  }));
+
+  return rankedEntries;
+}
+
+/**
  * GET /api/leaderboard
  * Get ranked leaderboard of all students based on their current marks
  */
@@ -22,109 +119,8 @@ router.get('/leaderboard', async (req: Request, res: Response) => {
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
     const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
 
-    // Query to get leaderboard data with scores calculated
-    const { data: leaderboardData, error } = await supabase
-      .from('students')
-      .select(`
-        student_id,
-        full_name,
-        created_at,
-        student_check_ins (
-          id,
-          created_at
-        ),
-        student_reviews (
-          id,
-          created_at
-        )
-      `)
-      .order('created_at', { ascending: true });
-
-    if (error) {
-      console.error('Database error:', error);
-      return res.status(500).json({
-        success: false,
-        error: 'DATABASE_ERROR',
-        message: 'Failed to fetch leaderboard data'
-      });
-    }
-
-    if (!leaderboardData) {
-      return res.status(200).json({
-        success: true,
-        data: {
-          leaderboard: [],
-          total_students: 0,
-          showing: {
-            limit,
-            offset
-          }
-        }
-      });
-    }
-
-    // Calculate scores and prepare leaderboard entries
-    const leaderboardEntries: Omit<LeaderboardEntry, 'rank'>[] = leaderboardData.map(student => {
-      const checkIns = student.student_check_ins || [];
-      const reviews = student.student_reviews || [];
-      const totalCheckIns = checkIns.length;
-      const totalReviews = reviews.length;
-      
-      // Scoring: 10 marks for check-ins (if any), 10 marks for app review (if any)
-      let totalMarks = 0;
-      if (totalCheckIns > 0) totalMarks += 10; // Check-in marks
-      if (totalReviews > 0) totalMarks += 10;  // App review marks
-      
-      // Find latest check-in
-      const latestCheckIn = checkIns.length > 0 
-        ? checkIns.reduce((latest, current) => 
-            new Date(current.created_at) > new Date(latest.created_at) ? current : latest
-          ).created_at
-        : null;
-
-      return {
-        student_id: student.student_id,
-        full_name: student.full_name,
-        total_marks: totalMarks,
-        total_check_ins: totalCheckIns,
-        latest_check_in: latestCheckIn
-      };
-    });
-
-    // Sort by ranking criteria
-    const sortedEntries = leaderboardEntries.sort((a, b) => {
-      // Primary: Total marks (descending)
-      if (a.total_marks !== b.total_marks) {
-        return b.total_marks - a.total_marks;
-      }
-      
-      // Tiebreaker 1: Number of check-ins (descending)
-      if (a.total_check_ins !== b.total_check_ins) {
-        return b.total_check_ins - a.total_check_ins;
-      }
-      
-      // Tiebreaker 2: Most recent check-in (more recent first)
-      if (a.latest_check_in && b.latest_check_in) {
-        const dateA = new Date(a.latest_check_in);
-        const dateB = new Date(b.latest_check_in);
-        if (dateA.getTime() !== dateB.getTime()) {
-          return dateB.getTime() - dateA.getTime();
-        }
-      } else if (a.latest_check_in && !b.latest_check_in) {
-        return -1;
-      } else if (!a.latest_check_in && b.latest_check_in) {
-        return 1;
-      }
-      
-      // Tiebreaker 3: Alphabetical by name
-      return a.full_name.localeCompare(b.full_name);
-    });
-
-    // Add rank numbers
-    const rankedEntries: LeaderboardEntry[] = sortedEntries.map((entry, index) => ({
-      ...entry,
-      rank: index + 1
-    }));
+    // Get leaderboard data using shared function
+    const rankedEntries = await getLeaderboardData();
 
     // Apply pagination
     const paginatedEntries = rankedEntries.slice(offset, offset + limit);
@@ -170,19 +166,8 @@ router.get('/leaderboard/student/:student_id', async (req: Request, res: Respons
       });
     }
 
-    // Get the full leaderboard first (reuse logic from above)
-    const leaderboardResponse = await fetch(`${req.protocol}://${req.get('host')}/api/leaderboard?limit=1000`);
-    const leaderboardResult = await leaderboardResponse.json() as { success: boolean; data: { leaderboard: LeaderboardEntry[] } };
-
-    if (!leaderboardResult.success) {
-      return res.status(500).json({
-        success: false,
-        error: 'LEADERBOARD_ERROR',
-        message: 'Failed to fetch leaderboard'
-      });
-    }
-
-    const fullLeaderboard: LeaderboardEntry[] = leaderboardResult.data.leaderboard;
+    // Get the full leaderboard using the same logic as the main endpoint
+    const fullLeaderboard = await getLeaderboardData();
     
     // Find the student
     const studentIndex = fullLeaderboard.findIndex(entry => entry.student_id === student_id);

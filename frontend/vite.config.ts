@@ -10,6 +10,13 @@ export default defineConfig({
       '127.0.0.1',
       '100.114.217.105',
       '496b-59-126-87-6.ngrok-free.app'
-    ]
+    ],
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   }
 })

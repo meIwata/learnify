@@ -78,6 +78,16 @@ const Navigation: React.FC = () => {
               Lessons
             </Link>
             <Link 
+              to="/submissions" 
+              className={`font-medium pb-1 transition-colors ${
+                isActive('/submissions') 
+                  ? 'text-blue-600 border-b-2 border-blue-600' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Submissions
+            </Link>
+            <Link 
               to="/leaderboard" 
               className={`font-medium pb-1 transition-colors ${
                 isActive('/leaderboard') 
