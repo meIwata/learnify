@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Upload, X, Github, FileText, Image, AlertCircle } from 'lucide-react';
+import { uploadSubmission, type Submission } from '../lib/api';
 
 interface SubmissionUploadProps {
   studentId: string;
   lessonId?: string;
-  onUploadSuccess?: (submission: any) => void;
+  onUploadSuccess?: (submission: Submission) => void;
 }
 
 const SubmissionUpload: React.FC<SubmissionUploadProps> = ({
@@ -114,27 +115,18 @@ const SubmissionUpload: React.FC<SubmissionUploadProps> = ({
       if (lessonId) formData.append('lesson_id', lessonId);
       if (file) formData.append('file', file);
 
-      const response = await fetch('/api/submissions', {
-        method: 'POST',
-        body: formData
-      });
+      const submission = await uploadSubmission(formData);
 
-      const data = await response.json();
-
-      if (data.success) {
-        // Reset form
-        setTitle('');
-        setDescription('');
-        setGithubUrl('');
-        setFile(null);
-        setSubmissionType('screenshot');
-        
-        // Notify parent component
-        if (onUploadSuccess) {
-          onUploadSuccess(data.data.submission);
-        }
-      } else {
-        setError(data.error || 'Failed to upload submission');
+      // Reset form
+      setTitle('');
+      setDescription('');
+      setGithubUrl('');
+      setFile(null);
+      setSubmissionType('screenshot');
+      
+      // Notify parent component
+      if (onUploadSuccess) {
+        onUploadSuccess(submission);
       }
     } catch (err) {
       setError('Network error while uploading submission');

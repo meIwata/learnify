@@ -294,4 +294,72 @@ export const updateLessonUrl = async (
   return response.data.data;
 };
 
+// Submissions interfaces
+export interface Submission {
+  id: number;
+  student_id: string;
+  student_name: string;
+  submission_type: 'screenshot' | 'github_repo';
+  title: string;
+  description?: string;
+  file_path?: string;
+  file_name?: string;
+  file_size?: number;
+  mime_type?: string;
+  github_url?: string;
+  lesson_id?: string;
+  file_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SubmissionsResponse {
+  success: boolean;
+  data: {
+    submissions: Submission[];
+    total: number;
+  };
+  error?: string;
+}
+
+export interface SubmissionUploadResponse {
+  success: boolean;
+  data: {
+    submission: Submission;
+  };
+  error?: string;
+}
+
+// Submissions API functions
+export const getSubmissions = async (params?: {
+  student_id?: string;
+  lesson_id?: string;
+  submission_type?: string;
+}): Promise<SubmissionsResponse['data']> => {
+  const response = await api.get<SubmissionsResponse>('/api/submissions', { params });
+  if (!response.data.success) {
+    throw new Error(response.data.error || 'Failed to fetch submissions');
+  }
+  return response.data.data;
+};
+
+export const uploadSubmission = async (formData: FormData): Promise<Submission> => {
+  const response = await api.post<SubmissionUploadResponse>('/api/submissions', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  if (!response.data.success) {
+    throw new Error(response.data.error || 'Failed to upload submission');
+  }
+  return response.data.data.submission;
+};
+
+export const deleteSubmission = async (submissionId: number): Promise<void> => {
+  const response = await api.delete(`/api/submissions/${submissionId}`);
+  if (response.status !== 200) {
+    throw new Error('Failed to delete submission');
+  }
+};
+
 export default api;

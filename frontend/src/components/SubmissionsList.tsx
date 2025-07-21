@@ -1,23 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, FileText, Github, Image, Download, Eye, Trash2, Filter } from 'lucide-react';
-
-interface Submission {
-  id: number;
-  student_id: string;
-  student_name: string;
-  submission_type: 'screenshot' | 'github_repo';
-  title: string;
-  description?: string;
-  file_path?: string;
-  file_name?: string;
-  file_size?: number;
-  mime_type?: string;
-  github_url?: string;
-  lesson_id?: string;
-  file_url?: string;
-  created_at: string;
-  updated_at: string;
-}
+import { getSubmissions, deleteSubmission, getAllStudents, type Submission } from '../lib/api';
 
 interface SubmissionsListProps {
   studentId?: string;
@@ -41,29 +24,23 @@ const SubmissionsList: React.FC<SubmissionsListProps> = ({
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
+      const params: { student_id?: string; lesson_id?: string; submission_type?: string } = {};
       
       // For specific student view, always filter by studentId
       // For admin "all submissions" view, use selectedStudent filter instead
       if (studentId && selectedStudent === 'all') {
-        params.append('student_id', studentId);
+        params.student_id = studentId;
       } else if (selectedStudent !== 'all') {
-        params.append('student_id', selectedStudent);
+        params.student_id = selectedStudent;
       }
       
-      if (lessonId) params.append('lesson_id', lessonId);
-      if (selectedType !== 'all') params.append('submission_type', selectedType);
+      if (lessonId) params.lesson_id = lessonId;
+      if (selectedType !== 'all') params.submission_type = selectedType;
 
-      const response = await fetch(`/api/submissions?${params}`);
-      const data = await response.json();
-
-      if (data.success) {
-        setSubmissions(data.data.submissions);
-      } else {
-        setError(data.error || 'Failed to fetch submissions');
-      }
+      const data = await getSubmissions(params);
+      setSubmissions(data.submissions);
     } catch (err) {
-      setError('Network error while fetching submissions');
+      setError(err instanceof Error ? err.message : 'Network error while fetching submissions');
     } finally {
       setLoading(false);
     }
@@ -74,14 +51,11 @@ const SubmissionsList: React.FC<SubmissionsListProps> = ({
     if (studentId) return; // Only fetch for admin view
     
     try {
-      const response = await fetch('/api/auto/students');
-      const data = await response.json();
-      if (data.success) {
-        setStudents(data.data.students.map((s: any) => ({
-          student_id: s.student_id,
-          full_name: s.full_name
-        })));
-      }
+      const students = await getAllStudents();
+      setStudents(students.map(s => ({
+        student_id: s.student_id,
+        full_name: s.full_name
+      })));
     } catch (err) {
       console.error('Failed to fetch students:', err);
     }
@@ -141,15 +115,8 @@ const SubmissionsList: React.FC<SubmissionsListProps> = ({
     if (!confirm('Are you sure you want to delete this submission?')) return;
 
     try {
-      const response = await fetch(`/api/submissions/${submissionId}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        setSubmissions(submissions.filter(s => s.id !== submissionId));
-      } else {
-        alert('Failed to delete submission');
-      }
+      await deleteSubmission(submissionId);
+      setSubmissions(submissions.filter(s => s.id !== submissionId));
     } catch (err) {
       alert('Error deleting submission');
     }
