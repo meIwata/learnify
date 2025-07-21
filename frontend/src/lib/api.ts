@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Use empty string for development to use Vite proxy, or full URL for production
-const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '' : 'http://localhost:3000');
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '' : 'https://learnify-api.zeabur.app');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
