@@ -30,6 +30,11 @@ async function getLeaderboardData(): Promise<LeaderboardEntry[]> {
       student_reviews (
         id,
         created_at
+      ),
+      submissions (
+        id,
+        submission_type,
+        created_at
       )
     `)
     .order('created_at', { ascending: true });
@@ -47,13 +52,16 @@ async function getLeaderboardData(): Promise<LeaderboardEntry[]> {
   const leaderboardEntries: Omit<LeaderboardEntry, 'rank'>[] = leaderboardData.map(student => {
     const checkIns = student.student_check_ins || [];
     const reviews = student.student_reviews || [];
+    const submissions = student.submissions || [];
     const totalCheckIns = checkIns.length;
     const totalReviews = reviews.length;
+    const totalSubmissions = submissions.length;
     
-    // Scoring: 10 marks for check-ins (if any), 10 marks for app review (if any)
+    // Scoring: 10 marks for check-ins (if any), 10 marks for app review (if any), 10 marks for submissions (if any)
     let totalMarks = 0;
     if (totalCheckIns > 0) totalMarks += 10; // Check-in marks
     if (totalReviews > 0) totalMarks += 10;  // App review marks
+    if (totalSubmissions > 0) totalMarks += 10; // Submission marks (any number of screenshots = 10 points)
     
     // Find latest check-in
     const latestCheckIn = checkIns.length > 0 

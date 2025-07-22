@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getStudentCheckIns, getAllStudents, getStudentReviews } from '../lib/api';
-import type { Student, StudentCheckIn, StudentReview } from '../lib/api';
+import { getStudentCheckIns, getAllStudents, getStudentReviews, getSubmissions } from '../lib/api';
+import type { Student, StudentCheckIn, StudentReview, Submission } from '../lib/api';
 
 const ProfilePage: React.FC = () => {
   const { studentId } = useParams<{ studentId: string }>();
@@ -9,9 +9,9 @@ const ProfilePage: React.FC = () => {
   const [student, setStudent] = useState<Student | null>(null);
   const [checkIns, setCheckIns] = useState<StudentCheckIn[]>([]);
   const [reviews, setReviews] = useState<StudentReview[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkInsLoading, setCheckInsLoading] = useState(false);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -43,13 +43,21 @@ const ProfilePage: React.FC = () => {
         setCheckIns(studentCheckIns);
         
         // Fetch reviews for this student
-        setReviewsLoading(true);
         try {
           const studentReviewsData = await getStudentReviews(studentId);
           setReviews(studentReviewsData.data.reviews);
-        } catch (err) {
+        } catch {
           console.log('No reviews found for student, this is normal');
           setReviews([]);
+        }
+        
+        // Fetch submissions for this student
+        try {
+          const studentSubmissionsData = await getSubmissions({ student_id: studentId });
+          setSubmissions(studentSubmissionsData.submissions);
+        } catch {
+          console.log('No submissions found for student, this is normal');
+          setSubmissions([]);
         }
         
       } catch (err) {
@@ -58,7 +66,6 @@ const ProfilePage: React.FC = () => {
       } finally {
         setLoading(false);
         setCheckInsLoading(false);
-        setReviewsLoading(false);
       }
     };
 
@@ -256,6 +263,10 @@ const ProfilePage: React.FC = () => {
                   <span className="text-2xl font-bold text-blue-600">{checkIns.length}</span>
                 </div>
                 <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Total Submissions</span>
+                  <span className="text-2xl font-bold text-green-600">{submissions.length}</span>
+                </div>
+                <div className="flex items-center justify-between">
                   <span className="text-gray-600">Last Check-in</span>
                   <span className="text-sm text-gray-500">
                     {checkIns.length > 0 ? formatDate(checkIns[0]?.created_at) : 'Never'}
@@ -320,35 +331,59 @@ const ProfilePage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Profile Picture Marks */}
+                {/* Screenshot Submissions Marks */}
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                      <i className="fas fa-user-circle text-sm text-gray-400"></i>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      submissions.filter(s => s.submission_type === 'screenshot').length > 0 ? 'bg-green-100' : 'bg-gray-100'
+                    }`}>
+                      <i className={`fas fa-image text-sm ${
+                        submissions.filter(s => s.submission_type === 'screenshot').length > 0 ? 'text-green-600' : 'text-gray-400'
+                      }`}></i>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">Profile Picture</p>
-                      <p className="text-xs text-gray-500">Not submitted</p>
+                      <p className="font-medium text-gray-900">Screenshot Submissions</p>
+                      <p className="text-xs text-gray-500">
+                        {submissions.filter(s => s.submission_type === 'screenshot').length > 0 
+                          ? `${submissions.filter(s => s.submission_type === 'screenshot').length} submitted` 
+                          : 'Not submitted'}
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-lg font-bold text-gray-400">0/10</span>
+                    <span className={`text-lg font-bold ${
+                      submissions.filter(s => s.submission_type === 'screenshot').length > 0 ? 'text-green-600' : 'text-gray-400'
+                    }`}>
+                      {submissions.filter(s => s.submission_type === 'screenshot').length > 0 ? '10' : '0'}/10
+                    </span>
                   </div>
                 </div>
 
                 {/* GitHub Repository Marks */}
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                      <i className="fab fa-github text-sm text-gray-400"></i>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      submissions.filter(s => s.submission_type === 'github_repo').length > 0 ? 'bg-green-100' : 'bg-gray-100'
+                    }`}>
+                      <i className={`fab fa-github text-sm ${
+                        submissions.filter(s => s.submission_type === 'github_repo').length > 0 ? 'text-green-600' : 'text-gray-400'
+                      }`}></i>
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">GitHub Repository</p>
-                      <p className="text-xs text-gray-500">Not submitted</p>
+                      <p className="text-xs text-gray-500">
+                        {submissions.filter(s => s.submission_type === 'github_repo').length > 0 
+                          ? `${submissions.filter(s => s.submission_type === 'github_repo').length} submitted` 
+                          : 'Not submitted'}
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-lg font-bold text-gray-400">0/10</span>
+                    <span className={`text-lg font-bold ${
+                      submissions.filter(s => s.submission_type === 'github_repo').length > 0 ? 'text-green-600' : 'text-gray-400'
+                    }`}>
+                      {submissions.filter(s => s.submission_type === 'github_repo').length > 0 ? '10' : '0'}/10
+                    </span>
                   </div>
                 </div>
 
@@ -377,6 +412,7 @@ const ProfilePage: React.FC = () => {
                         let total = 0;
                         if (checkIns.length > 0) total += 10;
                         if (reviews.length > 0) total += 10;
+                        if (submissions.length > 0) total += 10;
                         return total;
                       })()}/50
                     </span>
@@ -389,6 +425,7 @@ const ProfilePage: React.FC = () => {
                           let total = 0;
                           if (checkIns.length > 0) total += 10;
                           if (reviews.length > 0) total += 10;
+                          if (submissions.length > 0) total += 10;
                           return (total / 50) * 100;
                         })()}%` 
                       }}
@@ -399,6 +436,7 @@ const ProfilePage: React.FC = () => {
                       let total = 0;
                       if (checkIns.length > 0) total += 10;
                       if (reviews.length > 0) total += 10;
+                      if (submissions.length > 0) total += 10;
                       return (total / 50) * 100;
                     })()}% Complete
                   </p>
