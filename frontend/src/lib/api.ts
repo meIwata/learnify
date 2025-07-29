@@ -324,6 +324,40 @@ export const updateLessonDate = async (
   return response.data.data;
 };
 
+export const moveLessonPlanItem = async (
+  itemId: string,
+  teacherId: string,
+  targetLessonId: string,
+  newSortOrder?: number
+): Promise<{moved_item: any, source_lesson_id: string, target_lesson_id: string}> => {
+  const response = await api.put(`/api/lessons/plan-items/${itemId}/move`, {
+    teacher_id: teacherId,
+    target_lesson_id: targetLessonId,
+    new_sort_order: newSortOrder
+  });
+  if (!response.data.success) {
+    throw new Error('Failed to move lesson plan item');
+  }
+  return response.data.data;
+};
+
+export const reorderLessonPlanItems = async (
+  lessonId: string,
+  teacherId: string,
+  itemId: string,
+  newSortOrder: number
+): Promise<{lesson_id: string, reordered_items: any[]}> => {
+  const response = await api.put(`/api/lessons/${lessonId}/plan-items/reorder`, {
+    teacher_id: teacherId,
+    item_id: itemId,
+    new_sort_order: newSortOrder
+  });
+  if (!response.data.success) {
+    throw new Error('Failed to reorder lesson plan items');
+  }
+  return response.data.data;
+};
+
 // Submissions interfaces
 export interface Submission {
   id: number;

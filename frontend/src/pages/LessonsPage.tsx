@@ -1,6 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getAllLessons as getAllLessonsAPI, updateLessonProgress, updateLessonUrl, updateLessonTitle, updateLessonDate, getAdminStatus, type Lesson } from '../lib/api';
+import { getAllLessons as getAllLessonsAPI, updateLessonProgress, updateLessonUrl, updateLessonTitle, updateLessonDate, getAdminStatus, reorderLessonPlanItems, type Lesson, type LessonPlanItem } from '../lib/api';
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const LessonsPage: React.FC = () => {
   const { studentId } = useAuth();
@@ -16,6 +34,8 @@ const LessonsPage: React.FC = () => {
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [dateInputValue, setDateInputValue] = useState<string>('');
   const [expandedContent, setExpandedContent] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [draggedItem, setDraggedItem] = useState<LessonPlanItem | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,8 +55,8 @@ const LessonsPage: React.FC = () => {
         // Get all lessons from API with plans included (class-wide progress)
         const allLessons = await getAllLessonsAPI({ include_plan: true });
         setLessons(allLessons);
-      } catch (error) {
-        console.error('Error fetching lessons:', error);
+      } catch (err) {
+        console.error('Error fetching lessons:', err);
         setLessons([]);
       } finally {
         setIsLoading(false);
@@ -93,15 +113,12 @@ const LessonsPage: React.FC = () => {
     return { text: 'Upcoming', color: 'text-blue-600 bg-blue-50 border-blue-200' };
   };
 
-  const getProgressWidth = (progress: number) => {
-    return `${Math.min(progress, 100)}%`;
-  };
-
-  const getActionText = (progress: number) => {
-    if (progress === 0) return 'Start';
-    if (progress === 100) return 'Complete';
-    return 'Continue';
-  };
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const handleCheckboxChange = async (lessonId: string, itemId: string, completed: boolean) => {
     if (!isTeacher || !studentId) return;
@@ -221,6 +238,95 @@ const LessonsPage: React.FC = () => {
     setExpandedContent(expandedContent === lessonId ? null : lessonId);
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    setActiveId(active.id as string);
+    
+    // Find the dragged item across all lessons
+    for (const lesson of lessons) {
+      if (lesson.plan) {
+        const item = lesson.plan.find(item => item.id === active.id);
+        if (item) {
+          setDraggedItem(item);
+          break;
+        }
+      }
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over || !isTeacher || !studentId) {
+      setActiveId(null);
+      setDraggedItem(null);
+      return;
+    }
+
+    if (active.id !== over.id) {
+      // Find the lesson containing the dragged item
+      let sourceLessonId = '';
+      let sourceItems: LessonPlanItem[] = [];
+      
+      for (const lesson of lessons) {
+        if (lesson.plan) {
+          const itemIndex = lesson.plan.findIndex(item => item.id === active.id);
+          if (itemIndex !== -1) {
+            sourceLessonId = lesson.id;
+            sourceItems = [...lesson.plan];
+            break;
+          }
+        }
+      }
+
+      if (!sourceLessonId) {
+        setActiveId(null);
+        setDraggedItem(null);
+        return;
+      }
+
+      const oldIndex = sourceItems.findIndex(item => item.id === active.id);
+      const newIndex = sourceItems.findIndex(item => item.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        try {
+          // Update the order locally first for immediate feedback
+          const newItems = [...sourceItems];
+          const [movedItem] = newItems.splice(oldIndex, 1);
+          newItems.splice(newIndex, 0, movedItem);
+
+          setLessons(prev => prev.map(lesson => {
+            if (lesson.id === sourceLessonId) {
+              return { ...lesson, plan: newItems };
+            }
+            return lesson;
+          }));
+
+          // Call API to persist the change
+          await reorderLessonPlanItems(
+            sourceLessonId,
+            studentId,
+            active.id as string,
+            newIndex
+          );
+        } catch (error) {
+          console.error('Error reordering lesson plan items:', error);
+          // Revert the local change on error
+          setLessons(prev => prev.map(lesson => {
+            if (lesson.id === sourceLessonId) {
+              return { ...lesson, plan: sourceItems };
+            }
+            return lesson;
+          }));
+          alert('Failed to reorder lesson plan items. Please try again.');
+        }
+      }
+    }
+    
+    setActiveId(null);
+    setDraggedItem(null);
+  };
+
   const filterCounts = {
     all: lessons.length,
     today: lessons.filter(lesson => isLessonToday(lesson.scheduled_date)).length,
@@ -228,9 +334,84 @@ const LessonsPage: React.FC = () => {
     past: lessons.filter(lesson => isLessonPast(lesson.scheduled_date)).length
   };
 
+  // Sortable Item Component
+  const SortableItem = ({ item, lessonId, updatingProgress, isTeacher, onCheckboxChange }: {
+    item: LessonPlanItem;
+    lessonId: string;
+    updatingProgress: string | null;
+    isTeacher: boolean;
+    onCheckboxChange: (lessonId: string, itemId: string, completed: boolean) => void;
+  }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: item.id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={`flex items-center space-x-3 ${isDragging ? 'bg-gray-50' : ''}`}
+      >
+        {isTeacher && (
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+            title="Drag to reorder"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 2h2v20H7zM15 2h2v20h-2z"/>
+            </svg>
+          </div>
+        )}
+        <div className="relative">
+          <input
+            type="checkbox"
+            checked={item.completed}
+            onChange={(e) => onCheckboxChange(lessonId, item.id, e.target.checked)}
+            disabled={!isTeacher || updatingProgress === item.id}
+            className={`w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 ${
+              isTeacher ? 'cursor-pointer' : 'cursor-not-allowed'
+            }`}
+          />
+          {updatingProgress === item.id && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-3 h-3 border border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
+        </div>
+        <span className={`text-sm ${
+          item.completed ? 'text-gray-500 line-through' : 'text-gray-700'
+        }`}>
+          {item.title}
+          {item.required && (
+            <span className="ml-1 text-xs text-red-500">*</span>
+          )}
+        </span>
+      </div>
+    );
+  };
+
   return (
-    <div className="bg-gradient-to-br from-slate-50 to-blue-50 font-sans min-h-screen">
-      <main className="pt-16 min-h-screen">
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="bg-gradient-to-br from-slate-50 to-blue-50 font-sans min-h-screen">
+        <main className="pt-16 min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
           <div className="mb-8">
@@ -472,37 +653,29 @@ const LessonsPage: React.FC = () => {
                             {/* Lesson Plan */}
                             {lesson.plan && lesson.plan.length > 0 && !isSkipped && (
                               <div className="border-t border-gray-100 pt-4">
-                                <h4 className="text-sm font-medium text-gray-700 mb-3">Lesson Plan</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                  {lesson.plan.map((item) => (
-                                    <div key={item.id} className="flex items-center space-x-3">
-                                      <div className="relative">
-                                        <input
-                                          type="checkbox"
-                                          checked={item.completed}
-                                          onChange={(e) => handleCheckboxChange(lesson.id, item.id, e.target.checked)}
-                                          disabled={!isTeacher || updatingProgress === item.id}
-                                          className={`w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 ${
-                                            isTeacher ? 'cursor-pointer' : 'cursor-not-allowed'
-                                          }`}
-                                        />
-                                        {updatingProgress === item.id && (
-                                          <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className="w-3 h-3 border border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                                          </div>
-                                        )}
-                                      </div>
-                                      <span className={`text-sm ${
-                                        item.completed ? 'text-gray-500 line-through' : 'text-gray-700'
-                                      }`}>
-                                        {item.title}
-                                        {item.required && (
-                                          <span className="ml-1 text-xs text-red-500">*</span>
-                                        )}
-                                      </span>
-                                    </div>
-                                  ))}
+                                <div className="flex items-center justify-between mb-3">
+                                  <h4 className="text-sm font-medium text-gray-700">Lesson Plan</h4>
+                                  {isTeacher && (
+                                    <span className="text-xs text-gray-500">Drag to reorder</span>
+                                  )}
                                 </div>
+                                <SortableContext
+                                  items={lesson.plan.map(item => item.id)}
+                                  strategy={verticalListSortingStrategy}
+                                >
+                                  <div className="space-y-3">
+                                    {lesson.plan.map((item) => (
+                                      <SortableItem
+                                        key={item.id}
+                                        item={item}
+                                        lessonId={lesson.id}
+                                        updatingProgress={updatingProgress}
+                                        isTeacher={isTeacher}
+                                        onCheckboxChange={handleCheckboxChange}
+                                      />
+                                    ))}
+                                  </div>
+                                </SortableContext>
                               </div>
                             )}
 
@@ -598,7 +771,16 @@ const LessonsPage: React.FC = () => {
           </div>
         </div>
       </main>
-    </div>
+      </div>
+      <DragOverlay>
+        {activeId && draggedItem ? (
+          <div className="flex items-center space-x-3 bg-white border border-gray-200 rounded-lg p-2 shadow-lg">
+            <div className="w-4 h-4 bg-gray-200 rounded"></div>
+            <span className="text-sm text-gray-700">{draggedItem.title}</span>
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 };
 
