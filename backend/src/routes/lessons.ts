@@ -455,6 +455,88 @@ router.put('/:id/title', async (req: Request, res: Response) => {
   }
 });
 
+// PUT /api/lessons/:id/date - Update lesson date (teacher only)
+router.put('/:id/date', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { teacher_id, scheduled_date } = req.body;
+    
+    if (!teacher_id || !scheduled_date) {
+      return res.status(400).json({
+        success: false,
+        error: 'teacher_id and scheduled_date are required'
+      });
+    }
+    
+    // Verify teacher is admin
+    const { data: teacher, error: teacherError } = await supabase
+      .from('students')
+      .select('is_admin')
+      .eq('student_id', teacher_id)
+      .single();
+    
+    if (teacherError || !teacher || !teacher.is_admin) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only teachers can update lesson dates'
+      });
+    }
+    
+    // Validate date format
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(scheduled_date)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid date format. Expected YYYY-MM-DD'
+      });
+    }
+    
+    // Validate that it's a valid date
+    const parsedDate = new Date(scheduled_date);
+    if (isNaN(parsedDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid date value'
+      });
+    }
+    
+    const { data: lesson, error } = await supabase
+      .from('lessons')
+      .update({ scheduled_date })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating lesson date:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update lesson date',
+        details: error.message
+      });
+    }
+    
+    if (!lesson) {
+      return res.status(404).json({
+        success: false,
+        error: 'Lesson not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: lesson
+    });
+    
+  } catch (error) {
+    console.error('Error in PUT /lessons/:id/date:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
 // POST /api/lessons/:id/progress - Update class-wide progress on lesson plan item (teacher only)
 router.post('/:id/progress', async (req: Request, res: Response) => {
   try {

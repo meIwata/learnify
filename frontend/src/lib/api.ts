@@ -309,6 +309,21 @@ export const updateLessonTitle = async (
   return response.data.data;
 };
 
+export const updateLessonDate = async (
+  lessonId: string,
+  teacherId: string,
+  scheduledDate: string
+): Promise<Lesson> => {
+  const response = await api.put<LessonResponse>(`/api/lessons/${lessonId}/date`, {
+    teacher_id: teacherId,
+    scheduled_date: scheduledDate
+  });
+  if (!response.data.success) {
+    throw new Error('Failed to update lesson date');
+  }
+  return response.data.data;
+};
+
 // Submissions interfaces
 export interface Submission {
   id: number;

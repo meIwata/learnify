@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getAllLessons as getAllLessonsAPI, updateLessonProgress, updateLessonUrl, updateLessonTitle, getAdminStatus, type Lesson } from '../lib/api';
+import { getAllLessons as getAllLessonsAPI, updateLessonProgress, updateLessonUrl, updateLessonTitle, updateLessonDate, getAdminStatus, type Lesson } from '../lib/api';
 
 const LessonsPage: React.FC = () => {
   const { studentId } = useAuth();
@@ -13,6 +13,8 @@ const LessonsPage: React.FC = () => {
   const [urlInputValue, setUrlInputValue] = useState<string>('');
   const [editingTitle, setEditingTitle] = useState<string | null>(null);
   const [titleInputValue, setTitleInputValue] = useState<string>('');
+  const [editingDate, setEditingDate] = useState<string | null>(null);
+  const [dateInputValue, setDateInputValue] = useState<string>('');
   const [expandedContent, setExpandedContent] = useState<string | null>(null);
 
   useEffect(() => {
@@ -186,6 +188,35 @@ const LessonsPage: React.FC = () => {
     setTitleInputValue('');
   };
 
+  const handleDateEdit = (lessonId: string, currentDate: string) => {
+    setEditingDate(lessonId);
+    setDateInputValue(currentDate);
+  };
+
+  const handleDateSave = async (lessonId: string) => {
+    if (!isTeacher || !studentId || !dateInputValue.trim()) return;
+
+    try {
+      const updatedLesson = await updateLessonDate(lessonId, studentId, dateInputValue.trim());
+      
+      // Update local state
+      setLessons(prev => prev.map(lesson => 
+        lesson.id === lessonId ? updatedLesson : lesson
+      ));
+      
+      setEditingDate(null);
+      setDateInputValue('');
+    } catch (error) {
+      console.error('Error updating lesson date:', error);
+      alert('Failed to update lesson date. Please try again.');
+    }
+  };
+
+  const handleDateCancel = () => {
+    setEditingDate(null);
+    setDateInputValue('');
+  };
+
   const toggleContentExpansion = (lessonId: string) => {
     setExpandedContent(expandedContent === lessonId ? null : lessonId);
   };
@@ -346,7 +377,50 @@ const LessonsPage: React.FC = () => {
                             <p className={`mb-2 ${isSkipped ? 'text-gray-500' : 'text-gray-600'}`}>
                               {isSkipped ? 'This lesson was skipped and will not be covered.' : lesson.description}
                             </p>
-                            <p className="text-sm text-gray-500 mb-4">{formatLessonDate(lesson.scheduled_date)}</p>
+                            <div className="flex items-center gap-2 mb-4">
+                              {editingDate === lesson.id ? (
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="date"
+                                    value={dateInputValue}
+                                    onChange={(e) => setDateInputValue(e.target.value)}
+                                    className="px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        handleDateSave(lesson.id);
+                                      } else if (e.key === 'Escape') {
+                                        handleDateCancel();
+                                      }
+                                    }}
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={() => handleDateSave(lesson.id)}
+                                    className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={handleDateCancel}
+                                    className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm text-gray-500">{formatLessonDate(lesson.scheduled_date)}</p>
+                                  {isTeacher && !isSkipped && (
+                                    <button
+                                      onClick={() => handleDateEdit(lesson.id, lesson.scheduled_date)}
+                                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                    >
+                                      <i className="fas fa-edit"></i>
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                             
                             {/* Lesson Content */}
                             {lesson.lesson_content && lesson.lesson_content.length > 0 && !isSkipped && (

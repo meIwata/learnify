@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getCurrentLesson as getCurrentLessonAPI, updateLessonProgress, updateLessonUrl, getAdminStatus, type Lesson } from '../lib/api';
+import { getCurrentLesson as getCurrentLessonAPI, updateLessonProgress, updateLessonUrl, updateLessonDate, getAdminStatus, type Lesson } from '../lib/api';
 
 const CurrentLessons: React.FC = () => {
   const { studentId } = useAuth();
@@ -11,6 +11,8 @@ const CurrentLessons: React.FC = () => {
   const [updatingProgress, setUpdatingProgress] = useState<string | null>(null);
   const [editingUrl, setEditingUrl] = useState<boolean>(false);
   const [urlInputValue, setUrlInputValue] = useState<string>('');
+  const [editingDate, setEditingDate] = useState<boolean>(false);
+  const [dateInputValue, setDateInputValue] = useState<string>('');
   const [expandedContent, setExpandedContent] = useState<boolean>(false);
 
   useEffect(() => {
@@ -134,6 +136,30 @@ const CurrentLessons: React.FC = () => {
     setUrlInputValue('');
   };
 
+  const handleDateEdit = (currentDate?: string) => {
+    setEditingDate(true);
+    setDateInputValue(currentDate || '');
+  };
+
+  const handleDateSave = async () => {
+    if (!isTeacher || !studentId || !currentLesson || !dateInputValue.trim()) return;
+
+    try {
+      const updatedLesson = await updateLessonDate(currentLesson.id, studentId, dateInputValue.trim());
+      setCurrentLesson(updatedLesson);
+      setEditingDate(false);
+      setDateInputValue('');
+    } catch (error) {
+      console.error('Error updating date:', error);
+      alert('Failed to update date. Please try again.');
+    }
+  };
+
+  const handleDateCancel = () => {
+    setEditingDate(false);
+    setDateInputValue('');
+  };
+
   const toggleContentExpansion = () => {
     setExpandedContent(!expandedContent);
   };
@@ -176,7 +202,50 @@ const CurrentLessons: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-sm text-gray-600 mb-2">{currentLesson.description}</p>
-                <p className="text-xs text-gray-500 mb-3">{formatLessonDate(currentLesson.scheduled_date)}</p>
+                <div className="flex items-center gap-2 mb-3">
+                  {editingDate ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="date"
+                        value={dateInputValue}
+                        onChange={(e) => setDateInputValue(e.target.value)}
+                        className="px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleDateSave();
+                          } else if (e.key === 'Escape') {
+                            handleDateCancel();
+                          }
+                        }}
+                        autoFocus
+                      />
+                      <button
+                        onClick={handleDateSave}
+                        className="px-2 py-0.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={handleDateCancel}
+                        className="px-2 py-0.5 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-gray-500">{formatLessonDate(currentLesson.scheduled_date)}</p>
+                      {isTeacher && (
+                        <button
+                          onClick={() => handleDateEdit(currentLesson.scheduled_date)}
+                          className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          <i className="fas fa-edit"></i>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
                 
                 {/* Lesson Content */}
                 {currentLesson.lesson_content && currentLesson.lesson_content.length > 0 && (
