@@ -11,6 +11,7 @@ import {
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
+  useDroppable,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -36,6 +37,7 @@ const LessonsPage: React.FC = () => {
   const [expandedContent, setExpandedContent] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draggedItem, setDraggedItem] = useState<LessonPlanItem | null>(null);
+  const [sourceLessonId, setSourceLessonId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -242,89 +244,117 @@ const LessonsPage: React.FC = () => {
     const { active } = event;
     setActiveId(active.id as string);
     
-    // Find the dragged item across all lessons
+    // Find the dragged item and source lesson across all lessons
     for (const lesson of lessons) {
       if (lesson.plan) {
-        const item = lesson.plan.find(item => item.id === active.id);
+        const item = lesson.plan.find(item => item && item.id === active.id);
         if (item) {
           setDraggedItem(item);
+          setSourceLessonId(lesson.id);
           break;
         }
       }
     }
   };
 
+  const handleDragOver = () => {
+    // Visual feedback is handled by the useDroppable hook in LessonDropZone
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     
-    if (!over || !isTeacher || !studentId) {
+    if (!over || !isTeacher || !studentId || !sourceLessonId) {
       setActiveId(null);
       setDraggedItem(null);
+      setSourceLessonId(null);
       return;
     }
 
-    if (active.id !== over.id) {
-      // Find the lesson containing the dragged item
-      let sourceLessonId = '';
-      let sourceItems: LessonPlanItem[] = [];
+    const overId = over.id as string;
+    
+    // Check if dropping on a lesson drop zone (cross-lesson move)
+    if (overId.startsWith('lesson-drop-')) {
+      const targetLessonId = overId.replace('lesson-drop-', '');
       
-      for (const lesson of lessons) {
-        if (lesson.plan) {
-          const itemIndex = lesson.plan.findIndex(item => item.id === active.id);
-          if (itemIndex !== -1) {
-            sourceLessonId = lesson.id;
-            sourceItems = [...lesson.plan];
-            break;
+      if (targetLessonId !== sourceLessonId) {
+        try {
+          // Move item from source lesson to target lesson
+          const sourceLesson = lessons.find(l => l.id === sourceLessonId);
+          const targetLesson = lessons.find(l => l.id === targetLessonId);
+          
+          if (sourceLesson && targetLesson && draggedItem) {
+            // Remove from source lesson
+            const newSourcePlan = sourceLesson.plan?.filter(item => item.id !== active.id) || [];
+            
+            // Add to target lesson at the end
+            const newTargetPlan = [...(targetLesson.plan || []), draggedItem];
+            
+            // Update local state
+            setLessons(prev => prev.map(lesson => {
+              if (lesson.id === sourceLessonId) {
+                return { ...lesson, plan: newSourcePlan };
+              } else if (lesson.id === targetLessonId) {
+                return { ...lesson, plan: newTargetPlan };
+              }
+              return lesson;
+            }));
+            
+            // TODO: Call API to move item between lessons
+            // await moveItemBetweenLessons(sourceLessonId, targetLessonId, active.id as string);
           }
+        } catch (error) {
+          console.error('Error moving item between lessons:', error);
+          alert('Failed to move item. Please try again.');
         }
       }
+    } else if (active.id !== over.id && sourceLessonId) {
+      // Reordering within the same lesson
+      const sourceLesson = lessons.find(l => l.id === sourceLessonId);
+      if (sourceLesson && sourceLesson.plan) {
+        const sourceItems = [...sourceLesson.plan];
+        const oldIndex = sourceItems.findIndex(item => item && item.id === active.id);
+        const newIndex = sourceItems.findIndex(item => item && item.id === over.id);
 
-      if (!sourceLessonId) {
-        setActiveId(null);
-        setDraggedItem(null);
-        return;
-      }
+        if (oldIndex !== -1 && newIndex !== -1) {
+          try {
+            // Update the order locally first for immediate feedback
+            const newItems = [...sourceItems];
+            const [movedItem] = newItems.splice(oldIndex, 1);
+            newItems.splice(newIndex, 0, movedItem);
 
-      const oldIndex = sourceItems.findIndex(item => item.id === active.id);
-      const newIndex = sourceItems.findIndex(item => item.id === over.id);
+            setLessons(prev => prev.map(lesson => {
+              if (lesson.id === sourceLessonId) {
+                return { ...lesson, plan: newItems };
+              }
+              return lesson;
+            }));
 
-      if (oldIndex !== -1 && newIndex !== -1) {
-        try {
-          // Update the order locally first for immediate feedback
-          const newItems = [...sourceItems];
-          const [movedItem] = newItems.splice(oldIndex, 1);
-          newItems.splice(newIndex, 0, movedItem);
-
-          setLessons(prev => prev.map(lesson => {
-            if (lesson.id === sourceLessonId) {
-              return { ...lesson, plan: newItems };
-            }
-            return lesson;
-          }));
-
-          // Call API to persist the change
-          await reorderLessonPlanItems(
-            sourceLessonId,
-            studentId,
-            active.id as string,
-            newIndex
-          );
-        } catch (error) {
-          console.error('Error reordering lesson plan items:', error);
-          // Revert the local change on error
-          setLessons(prev => prev.map(lesson => {
-            if (lesson.id === sourceLessonId) {
-              return { ...lesson, plan: sourceItems };
-            }
-            return lesson;
-          }));
-          alert('Failed to reorder lesson plan items. Please try again.');
+            // Call API to persist the change
+            await reorderLessonPlanItems(
+              sourceLessonId,
+              studentId,
+              active.id as string,
+              newIndex
+            );
+          } catch (error) {
+            console.error('Error reordering lesson plan items:', error);
+            // Revert the local change on error
+            setLessons(prev => prev.map(lesson => {
+              if (lesson.id === sourceLessonId) {
+                return { ...lesson, plan: sourceItems };
+              }
+              return lesson;
+            }));
+            alert('Failed to reorder lesson plan items. Please try again.');
+          }
         }
       }
     }
     
     setActiveId(null);
     setDraggedItem(null);
+    setSourceLessonId(null);
   };
 
   const filterCounts = {
@@ -332,6 +362,31 @@ const LessonsPage: React.FC = () => {
     today: lessons.filter(lesson => isLessonToday(lesson.scheduled_date)).length,
     upcoming: lessons.filter(lesson => !isLessonPast(lesson.scheduled_date) && !isLessonToday(lesson.scheduled_date)).length,
     past: lessons.filter(lesson => isLessonPast(lesson.scheduled_date)).length
+  };
+
+  // Lesson Drop Zone Component
+  const LessonDropZone = ({ lessonId, isVisible }: { lessonId: string; isVisible: boolean }) => {
+    const { isOver, setNodeRef } = useDroppable({
+      id: `lesson-drop-${lessonId}`,
+    });
+
+    if (!isVisible) return null;
+
+    return (
+      <div
+        ref={setNodeRef}
+        className={`mt-2 p-4 border-2 border-dashed rounded-lg transition-all duration-200 ${
+          isOver
+            ? 'border-blue-500 bg-blue-50'
+            : 'border-gray-300 bg-gray-50'
+        }`}
+      >
+        <div className="text-center text-sm text-gray-600">
+          <i className="fas fa-plus-circle mr-2"></i>
+          Drop item here to move to this lesson
+        </div>
+      </div>
+    );
   };
 
   // Sortable Item Component
@@ -408,6 +463,7 @@ const LessonsPage: React.FC = () => {
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       <div className="bg-gradient-to-br from-slate-50 to-blue-50 font-sans min-h-screen">
@@ -633,7 +689,7 @@ const LessonsPage: React.FC = () => {
                               <div className="flex items-center space-x-4 mb-4">
                                 <span className="text-sm text-gray-500">
                                   {lesson.plan ? 
-                                    `${lesson.plan.filter(item => item.completed).length}/${lesson.plan.length} Complete` :
+                                    `${lesson.plan.filter(item => item && item.completed).length}/${lesson.plan.filter(item => item).length} Complete` :
                                     '0/0 Complete'
                                   }
                                 </span>
@@ -641,8 +697,8 @@ const LessonsPage: React.FC = () => {
                                   <div 
                                     className="h-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-300"
                                     style={{ 
-                                      width: lesson.plan ? 
-                                        `${Math.round((lesson.plan.filter(item => item.completed).length / lesson.plan.length) * 100)}%` :
+                                      width: lesson.plan && lesson.plan.filter(item => item).length > 0 ? 
+                                        `${Math.round((lesson.plan.filter(item => item && item.completed).length / lesson.plan.filter(item => item).length) * 100)}%` :
                                         '0%'
                                     }}
                                   ></div>
@@ -660,11 +716,11 @@ const LessonsPage: React.FC = () => {
                                   )}
                                 </div>
                                 <SortableContext
-                                  items={lesson.plan.map(item => item.id)}
+                                  items={lesson.plan.filter(item => item && item.id).map(item => item.id)}
                                   strategy={verticalListSortingStrategy}
                                 >
                                   <div className="space-y-3">
-                                    {lesson.plan.map((item) => (
+                                    {lesson.plan.filter(item => item && item.id).map((item) => (
                                       <SortableItem
                                         key={item.id}
                                         item={item}
@@ -676,6 +732,10 @@ const LessonsPage: React.FC = () => {
                                     ))}
                                   </div>
                                 </SortableContext>
+                                <LessonDropZone 
+                                  lessonId={lesson.id} 
+                                  isVisible={activeId !== null && sourceLessonId !== lesson.id && isTeacher}
+                                />
                               </div>
                             )}
 
