@@ -294,6 +294,21 @@ export const updateLessonUrl = async (
   return response.data.data;
 };
 
+export const updateLessonTitle = async (
+  lessonId: string,
+  teacherId: string,
+  title: string
+): Promise<Lesson> => {
+  const response = await api.put<LessonResponse>(`/api/lessons/${lessonId}/title`, {
+    teacher_id: teacherId,
+    name: title
+  });
+  if (!response.data.success) {
+    throw new Error('Failed to update lesson title');
+  }
+  return response.data.data;
+};
+
 // Submissions interfaces
 export interface Submission {
   id: number;

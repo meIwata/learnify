@@ -391,6 +391,70 @@ router.put('/:id/url', async (req: Request, res: Response) => {
   }
 });
 
+// PUT /api/lessons/:id/title - Update lesson title (teacher only)
+router.put('/:id/title', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { teacher_id, name } = req.body;
+    
+    if (!teacher_id || !name) {
+      return res.status(400).json({
+        success: false,
+        error: 'teacher_id and name are required'
+      });
+    }
+    
+    // Verify teacher is admin
+    const { data: teacher, error: teacherError } = await supabase
+      .from('students')
+      .select('is_admin')
+      .eq('student_id', teacher_id)
+      .single();
+    
+    if (teacherError || !teacher || !teacher.is_admin) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only teachers can update lesson titles'
+      });
+    }
+    
+    const { data: lesson, error } = await supabase
+      .from('lessons')
+      .update({ name: name.trim() })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating lesson title:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update lesson title',
+        details: error.message
+      });
+    }
+    
+    if (!lesson) {
+      return res.status(404).json({
+        success: false,
+        error: 'Lesson not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: lesson
+    });
+    
+  } catch (error) {
+    console.error('Error in PUT /lessons/:id/title:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
 // POST /api/lessons/:id/progress - Update class-wide progress on lesson plan item (teacher only)
 router.post('/:id/progress', async (req: Request, res: Response) => {
   try {

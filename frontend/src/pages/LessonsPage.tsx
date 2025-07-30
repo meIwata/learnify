@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getAllLessons as getAllLessonsAPI, updateLessonProgress, updateLessonUrl, getAdminStatus, type Lesson } from '../lib/api';
+import { getAllLessons as getAllLessonsAPI, updateLessonProgress, updateLessonUrl, updateLessonTitle, getAdminStatus, type Lesson } from '../lib/api';
 
 const LessonsPage: React.FC = () => {
   const { studentId } = useAuth();
@@ -11,6 +11,8 @@ const LessonsPage: React.FC = () => {
   const [updatingProgress, setUpdatingProgress] = useState<string | null>(null);
   const [editingUrl, setEditingUrl] = useState<string | null>(null);
   const [urlInputValue, setUrlInputValue] = useState<string>('');
+  const [editingTitle, setEditingTitle] = useState<string | null>(null);
+  const [titleInputValue, setTitleInputValue] = useState<string>('');
   const [expandedContent, setExpandedContent] = useState<string | null>(null);
 
   useEffect(() => {
@@ -155,6 +157,35 @@ const LessonsPage: React.FC = () => {
     setUrlInputValue('');
   };
 
+  const handleTitleEdit = (lessonId: string, currentTitle: string) => {
+    setEditingTitle(lessonId);
+    setTitleInputValue(currentTitle);
+  };
+
+  const handleTitleSave = async (lessonId: string) => {
+    if (!isTeacher || !studentId || !titleInputValue.trim()) return;
+
+    try {
+      const updatedLesson = await updateLessonTitle(lessonId, studentId, titleInputValue.trim());
+      
+      // Update local state
+      setLessons(prev => prev.map(lesson => 
+        lesson.id === lessonId ? updatedLesson : lesson
+      ));
+      
+      setEditingTitle(null);
+      setTitleInputValue('');
+    } catch (error) {
+      console.error('Error updating title:', error);
+      alert('Failed to update lesson title. Please try again.');
+    }
+  };
+
+  const handleTitleCancel = () => {
+    setEditingTitle(null);
+    setTitleInputValue('');
+  };
+
   const toggleContentExpansion = (lessonId: string) => {
     setExpandedContent(expandedContent === lessonId ? null : lessonId);
   };
@@ -264,9 +295,50 @@ const LessonsPage: React.FC = () => {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-3 mb-2">
-                              <h3 className={`text-xl font-semibold ${isSkipped ? 'text-gray-600' : 'text-gray-900'}`}>
-                                {lesson.name}
-                              </h3>
+                              {editingTitle === lesson.id ? (
+                                <div className="flex items-center gap-2 flex-1">
+                                  <input
+                                    type="text"
+                                    value={titleInputValue}
+                                    onChange={(e) => setTitleInputValue(e.target.value)}
+                                    className="flex-1 px-3 py-1 text-xl font-semibold border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        handleTitleSave(lesson.id);
+                                      } else if (e.key === 'Escape') {
+                                        handleTitleCancel();
+                                      }
+                                    }}
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={() => handleTitleSave(lesson.id)}
+                                    className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={handleTitleCancel}
+                                    className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 flex-1">
+                                  <h3 className={`text-xl font-semibold ${isSkipped ? 'text-gray-600' : 'text-gray-900'}`}>
+                                    {lesson.name}
+                                  </h3>
+                                  {isTeacher && !isSkipped && (
+                                    <button
+                                      onClick={() => handleTitleEdit(lesson.id, lesson.name)}
+                                      className="text-xs text-blue-600 hover:text-blue-700 font-medium ml-2"
+                                    >
+                                      <i className="fas fa-edit"></i>
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                               <span className={`px-3 py-1 text-xs font-medium rounded-full border ${status.color}`}>
                                 {status.text}
                               </span>
