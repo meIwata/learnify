@@ -1,6 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getAllLessons as getAllLessonsAPI, updateLessonProgress, updateLessonUrl, getAdminStatus, type Lesson } from '../lib/api';
+import { getAllLessons as getAllLessonsAPI, updateLessonProgress, updateLessonUrl, updateLessonTitle, updateLessonDate, getAdminStatus, reorderLessonPlanItems, type Lesson, type LessonPlanItem } from '../lib/api';
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+  useDroppable,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const LessonsPage: React.FC = () => {
   const { studentId } = useAuth();
@@ -11,7 +30,14 @@ const LessonsPage: React.FC = () => {
   const [updatingProgress, setUpdatingProgress] = useState<string | null>(null);
   const [editingUrl, setEditingUrl] = useState<string | null>(null);
   const [urlInputValue, setUrlInputValue] = useState<string>('');
+  const [editingTitle, setEditingTitle] = useState<string | null>(null);
+  const [titleInputValue, setTitleInputValue] = useState<string>('');
+  const [editingDate, setEditingDate] = useState<string | null>(null);
+  const [dateInputValue, setDateInputValue] = useState<string>('');
   const [expandedContent, setExpandedContent] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [draggedItem, setDraggedItem] = useState<LessonPlanItem | null>(null);
+  const [sourceLessonId, setSourceLessonId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,8 +57,8 @@ const LessonsPage: React.FC = () => {
         // Get all lessons from API with plans included (class-wide progress)
         const allLessons = await getAllLessonsAPI({ include_plan: true });
         setLessons(allLessons);
-      } catch (error) {
-        console.error('Error fetching lessons:', error);
+      } catch (err) {
+        console.error('Error fetching lessons:', err);
         setLessons([]);
       } finally {
         setIsLoading(false);
@@ -89,15 +115,12 @@ const LessonsPage: React.FC = () => {
     return { text: 'Upcoming', color: 'text-blue-600 bg-blue-50 border-blue-200' };
   };
 
-  const getProgressWidth = (progress: number) => {
-    return `${Math.min(progress, 100)}%`;
-  };
-
-  const getActionText = (progress: number) => {
-    if (progress === 0) return 'Start';
-    if (progress === 100) return 'Complete';
-    return 'Continue';
-  };
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const handleCheckboxChange = async (lessonId: string, itemId: string, completed: boolean) => {
     if (!isTeacher || !studentId) return;
@@ -155,8 +178,183 @@ const LessonsPage: React.FC = () => {
     setUrlInputValue('');
   };
 
+  const handleTitleEdit = (lessonId: string, currentTitle: string) => {
+    setEditingTitle(lessonId);
+    setTitleInputValue(currentTitle);
+  };
+
+  const handleTitleSave = async (lessonId: string) => {
+    if (!isTeacher || !studentId || !titleInputValue.trim()) return;
+
+    try {
+      const updatedLesson = await updateLessonTitle(lessonId, studentId, titleInputValue.trim());
+      
+      // Update local state
+      setLessons(prev => prev.map(lesson => 
+        lesson.id === lessonId ? updatedLesson : lesson
+      ));
+      
+      setEditingTitle(null);
+      setTitleInputValue('');
+    } catch (error) {
+      console.error('Error updating title:', error);
+      alert('Failed to update lesson title. Please try again.');
+    }
+  };
+
+  const handleTitleCancel = () => {
+    setEditingTitle(null);
+    setTitleInputValue('');
+  };
+
+  const handleDateEdit = (lessonId: string, currentDate: string) => {
+    setEditingDate(lessonId);
+    setDateInputValue(currentDate);
+  };
+
+  const handleDateSave = async (lessonId: string) => {
+    if (!isTeacher || !studentId || !dateInputValue.trim()) return;
+
+    try {
+      const updatedLesson = await updateLessonDate(lessonId, studentId, dateInputValue.trim());
+      
+      // Update local state
+      setLessons(prev => prev.map(lesson => 
+        lesson.id === lessonId ? updatedLesson : lesson
+      ));
+      
+      setEditingDate(null);
+      setDateInputValue('');
+    } catch (error) {
+      console.error('Error updating lesson date:', error);
+      alert('Failed to update lesson date. Please try again.');
+    }
+  };
+
+  const handleDateCancel = () => {
+    setEditingDate(null);
+    setDateInputValue('');
+  };
+
   const toggleContentExpansion = (lessonId: string) => {
     setExpandedContent(expandedContent === lessonId ? null : lessonId);
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    setActiveId(active.id as string);
+    
+    // Find the dragged item and source lesson across all lessons
+    for (const lesson of lessons) {
+      if (lesson.plan) {
+        const item = lesson.plan.find(item => item && item.id === active.id);
+        if (item) {
+          setDraggedItem(item);
+          setSourceLessonId(lesson.id);
+          break;
+        }
+      }
+    }
+  };
+
+  const handleDragOver = () => {
+    // Visual feedback is handled by the useDroppable hook in LessonDropZone
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over || !isTeacher || !studentId || !sourceLessonId) {
+      setActiveId(null);
+      setDraggedItem(null);
+      setSourceLessonId(null);
+      return;
+    }
+
+    const overId = over.id as string;
+    
+    // Check if dropping on a lesson drop zone (cross-lesson move)
+    if (overId.startsWith('lesson-drop-')) {
+      const targetLessonId = overId.replace('lesson-drop-', '');
+      
+      if (targetLessonId !== sourceLessonId) {
+        try {
+          // Move item from source lesson to target lesson
+          const sourceLesson = lessons.find(l => l.id === sourceLessonId);
+          const targetLesson = lessons.find(l => l.id === targetLessonId);
+          
+          if (sourceLesson && targetLesson && draggedItem) {
+            // Remove from source lesson
+            const newSourcePlan = sourceLesson.plan?.filter(item => item.id !== active.id) || [];
+            
+            // Add to target lesson at the end
+            const newTargetPlan = [...(targetLesson.plan || []), draggedItem];
+            
+            // Update local state
+            setLessons(prev => prev.map(lesson => {
+              if (lesson.id === sourceLessonId) {
+                return { ...lesson, plan: newSourcePlan };
+              } else if (lesson.id === targetLessonId) {
+                return { ...lesson, plan: newTargetPlan };
+              }
+              return lesson;
+            }));
+            
+            // TODO: Call API to move item between lessons
+            // await moveItemBetweenLessons(sourceLessonId, targetLessonId, active.id as string);
+          }
+        } catch (error) {
+          console.error('Error moving item between lessons:', error);
+          alert('Failed to move item. Please try again.');
+        }
+      }
+    } else if (active.id !== over.id && sourceLessonId) {
+      // Reordering within the same lesson
+      const sourceLesson = lessons.find(l => l.id === sourceLessonId);
+      if (sourceLesson && sourceLesson.plan) {
+        const sourceItems = [...sourceLesson.plan];
+        const oldIndex = sourceItems.findIndex(item => item && item.id === active.id);
+        const newIndex = sourceItems.findIndex(item => item && item.id === over.id);
+
+        if (oldIndex !== -1 && newIndex !== -1) {
+          try {
+            // Update the order locally first for immediate feedback
+            const newItems = [...sourceItems];
+            const [movedItem] = newItems.splice(oldIndex, 1);
+            newItems.splice(newIndex, 0, movedItem);
+
+            setLessons(prev => prev.map(lesson => {
+              if (lesson.id === sourceLessonId) {
+                return { ...lesson, plan: newItems };
+              }
+              return lesson;
+            }));
+
+            // Call API to persist the change
+            await reorderLessonPlanItems(
+              sourceLessonId,
+              studentId,
+              active.id as string,
+              newIndex
+            );
+          } catch (error) {
+            console.error('Error reordering lesson plan items:', error);
+            // Revert the local change on error
+            setLessons(prev => prev.map(lesson => {
+              if (lesson.id === sourceLessonId) {
+                return { ...lesson, plan: sourceItems };
+              }
+              return lesson;
+            }));
+            alert('Failed to reorder lesson plan items. Please try again.');
+          }
+        }
+      }
+    }
+    
+    setActiveId(null);
+    setDraggedItem(null);
+    setSourceLessonId(null);
   };
 
   const filterCounts = {
@@ -166,9 +364,110 @@ const LessonsPage: React.FC = () => {
     past: lessons.filter(lesson => isLessonPast(lesson.scheduled_date)).length
   };
 
+  // Lesson Drop Zone Component
+  const LessonDropZone = ({ lessonId, isVisible }: { lessonId: string; isVisible: boolean }) => {
+    const { isOver, setNodeRef } = useDroppable({
+      id: `lesson-drop-${lessonId}`,
+    });
+
+    if (!isVisible) return null;
+
+    return (
+      <div
+        ref={setNodeRef}
+        className={`mt-2 p-4 border-2 border-dashed rounded-lg transition-all duration-200 ${
+          isOver
+            ? 'border-blue-500 bg-blue-50'
+            : 'border-gray-300 bg-gray-50'
+        }`}
+      >
+        <div className="text-center text-sm text-gray-600">
+          <i className="fas fa-plus-circle mr-2"></i>
+          Drop item here to move to this lesson
+        </div>
+      </div>
+    );
+  };
+
+  // Sortable Item Component
+  const SortableItem = ({ item, lessonId, updatingProgress, isTeacher, onCheckboxChange }: {
+    item: LessonPlanItem;
+    lessonId: string;
+    updatingProgress: string | null;
+    isTeacher: boolean;
+    onCheckboxChange: (lessonId: string, itemId: string, completed: boolean) => void;
+  }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: item.id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={`flex items-center space-x-3 ${isDragging ? 'bg-gray-50' : ''}`}
+      >
+        {isTeacher && (
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+            title="Drag to reorder"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 2h2v20H7zM15 2h2v20h-2z"/>
+            </svg>
+          </div>
+        )}
+        <div className="relative">
+          <input
+            type="checkbox"
+            checked={item.completed}
+            onChange={(e) => onCheckboxChange(lessonId, item.id, e.target.checked)}
+            disabled={!isTeacher || updatingProgress === item.id}
+            className={`w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 ${
+              isTeacher ? 'cursor-pointer' : 'cursor-not-allowed'
+            }`}
+          />
+          {updatingProgress === item.id && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-3 h-3 border border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
+        </div>
+        <span className={`text-sm ${
+          item.completed ? 'text-gray-500 line-through' : 'text-gray-700'
+        }`}>
+          {item.title}
+          {item.required && (
+            <span className="ml-1 text-xs text-red-500">*</span>
+          )}
+        </span>
+      </div>
+    );
+  };
+
   return (
-    <div className="bg-gradient-to-br from-slate-50 to-blue-50 font-sans min-h-screen">
-      <main className="pt-16 min-h-screen">
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="bg-gradient-to-br from-slate-50 to-blue-50 font-sans min-h-screen">
+        <main className="pt-16 min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
           <div className="mb-8">
@@ -264,9 +563,50 @@ const LessonsPage: React.FC = () => {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-3 mb-2">
-                              <h3 className={`text-xl font-semibold ${isSkipped ? 'text-gray-600' : 'text-gray-900'}`}>
-                                {lesson.name}
-                              </h3>
+                              {editingTitle === lesson.id ? (
+                                <div className="flex items-center gap-2 flex-1">
+                                  <input
+                                    type="text"
+                                    value={titleInputValue}
+                                    onChange={(e) => setTitleInputValue(e.target.value)}
+                                    className="flex-1 px-3 py-1 text-xl font-semibold border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        handleTitleSave(lesson.id);
+                                      } else if (e.key === 'Escape') {
+                                        handleTitleCancel();
+                                      }
+                                    }}
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={() => handleTitleSave(lesson.id)}
+                                    className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={handleTitleCancel}
+                                    className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 flex-1">
+                                  <h3 className={`text-xl font-semibold ${isSkipped ? 'text-gray-600' : 'text-gray-900'}`}>
+                                    {lesson.name}
+                                  </h3>
+                                  {isTeacher && !isSkipped && (
+                                    <button
+                                      onClick={() => handleTitleEdit(lesson.id, lesson.name)}
+                                      className="text-xs text-blue-600 hover:text-blue-700 font-medium ml-2"
+                                    >
+                                      <i className="fas fa-edit"></i>
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                               <span className={`px-3 py-1 text-xs font-medium rounded-full border ${status.color}`}>
                                 {status.text}
                               </span>
@@ -274,7 +614,50 @@ const LessonsPage: React.FC = () => {
                             <p className={`mb-2 ${isSkipped ? 'text-gray-500' : 'text-gray-600'}`}>
                               {isSkipped ? 'This lesson was skipped and will not be covered.' : lesson.description}
                             </p>
-                            <p className="text-sm text-gray-500 mb-4">{formatLessonDate(lesson.scheduled_date)}</p>
+                            <div className="flex items-center gap-2 mb-4">
+                              {editingDate === lesson.id ? (
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="date"
+                                    value={dateInputValue}
+                                    onChange={(e) => setDateInputValue(e.target.value)}
+                                    className="px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        handleDateSave(lesson.id);
+                                      } else if (e.key === 'Escape') {
+                                        handleDateCancel();
+                                      }
+                                    }}
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={() => handleDateSave(lesson.id)}
+                                    className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={handleDateCancel}
+                                    className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm text-gray-500">{formatLessonDate(lesson.scheduled_date)}</p>
+                                  {isTeacher && !isSkipped && (
+                                    <button
+                                      onClick={() => handleDateEdit(lesson.id, lesson.scheduled_date)}
+                                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                    >
+                                      <i className="fas fa-edit"></i>
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                             
                             {/* Lesson Content */}
                             {lesson.lesson_content && lesson.lesson_content.length > 0 && !isSkipped && (
@@ -306,7 +689,7 @@ const LessonsPage: React.FC = () => {
                               <div className="flex items-center space-x-4 mb-4">
                                 <span className="text-sm text-gray-500">
                                   {lesson.plan ? 
-                                    `${lesson.plan.filter(item => item.completed).length}/${lesson.plan.length} Complete` :
+                                    `${lesson.plan.filter(item => item && item.completed).length}/${lesson.plan.filter(item => item).length} Complete` :
                                     '0/0 Complete'
                                   }
                                 </span>
@@ -314,8 +697,8 @@ const LessonsPage: React.FC = () => {
                                   <div 
                                     className="h-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-300"
                                     style={{ 
-                                      width: lesson.plan ? 
-                                        `${Math.round((lesson.plan.filter(item => item.completed).length / lesson.plan.length) * 100)}%` :
+                                      width: lesson.plan && lesson.plan.filter(item => item).length > 0 ? 
+                                        `${Math.round((lesson.plan.filter(item => item && item.completed).length / lesson.plan.filter(item => item).length) * 100)}%` :
                                         '0%'
                                     }}
                                   ></div>
@@ -326,37 +709,33 @@ const LessonsPage: React.FC = () => {
                             {/* Lesson Plan */}
                             {lesson.plan && lesson.plan.length > 0 && !isSkipped && (
                               <div className="border-t border-gray-100 pt-4">
-                                <h4 className="text-sm font-medium text-gray-700 mb-3">Lesson Plan</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                  {lesson.plan.map((item) => (
-                                    <div key={item.id} className="flex items-center space-x-3">
-                                      <div className="relative">
-                                        <input
-                                          type="checkbox"
-                                          checked={item.completed}
-                                          onChange={(e) => handleCheckboxChange(lesson.id, item.id, e.target.checked)}
-                                          disabled={!isTeacher || updatingProgress === item.id}
-                                          className={`w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 ${
-                                            isTeacher ? 'cursor-pointer' : 'cursor-not-allowed'
-                                          }`}
-                                        />
-                                        {updatingProgress === item.id && (
-                                          <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className="w-3 h-3 border border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                                          </div>
-                                        )}
-                                      </div>
-                                      <span className={`text-sm ${
-                                        item.completed ? 'text-gray-500 line-through' : 'text-gray-700'
-                                      }`}>
-                                        {item.title}
-                                        {item.required && (
-                                          <span className="ml-1 text-xs text-red-500">*</span>
-                                        )}
-                                      </span>
-                                    </div>
-                                  ))}
+                                <div className="flex items-center justify-between mb-3">
+                                  <h4 className="text-sm font-medium text-gray-700">Lesson Plan</h4>
+                                  {isTeacher && (
+                                    <span className="text-xs text-gray-500">Drag to reorder</span>
+                                  )}
                                 </div>
+                                <SortableContext
+                                  items={lesson.plan.filter(item => item && item.id).map(item => item.id)}
+                                  strategy={verticalListSortingStrategy}
+                                >
+                                  <div className="space-y-3">
+                                    {lesson.plan.filter(item => item && item.id).map((item) => (
+                                      <SortableItem
+                                        key={item.id}
+                                        item={item}
+                                        lessonId={lesson.id}
+                                        updatingProgress={updatingProgress}
+                                        isTeacher={isTeacher}
+                                        onCheckboxChange={handleCheckboxChange}
+                                      />
+                                    ))}
+                                  </div>
+                                </SortableContext>
+                                <LessonDropZone 
+                                  lessonId={lesson.id} 
+                                  isVisible={activeId !== null && sourceLessonId !== lesson.id && isTeacher}
+                                />
                               </div>
                             )}
 
@@ -452,7 +831,16 @@ const LessonsPage: React.FC = () => {
           </div>
         </div>
       </main>
-    </div>
+      </div>
+      <DragOverlay>
+        {activeId && draggedItem ? (
+          <div className="flex items-center space-x-3 bg-white border border-gray-200 rounded-lg p-2 shadow-lg">
+            <div className="w-4 h-4 bg-gray-200 rounded"></div>
+            <span className="text-sm text-gray-700">{draggedItem.title}</span>
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 };
 

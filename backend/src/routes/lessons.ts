@@ -391,6 +391,429 @@ router.put('/:id/url', async (req: Request, res: Response) => {
   }
 });
 
+// PUT /api/lessons/:id/title - Update lesson title (teacher only)
+router.put('/:id/title', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { teacher_id, name } = req.body;
+    
+    if (!teacher_id || !name) {
+      return res.status(400).json({
+        success: false,
+        error: 'teacher_id and name are required'
+      });
+    }
+    
+    // Verify teacher is admin
+    const { data: teacher, error: teacherError } = await supabase
+      .from('students')
+      .select('is_admin')
+      .eq('student_id', teacher_id)
+      .single();
+    
+    if (teacherError || !teacher || !teacher.is_admin) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only teachers can update lesson titles'
+      });
+    }
+    
+    const { data: lesson, error } = await supabase
+      .from('lessons')
+      .update({ name: name.trim() })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating lesson title:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update lesson title',
+        details: error.message
+      });
+    }
+    
+    if (!lesson) {
+      return res.status(404).json({
+        success: false,
+        error: 'Lesson not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: lesson
+    });
+    
+  } catch (error) {
+    console.error('Error in PUT /lessons/:id/title:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// PUT /api/lessons/:id/date - Update lesson date (teacher only)
+router.put('/:id/date', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { teacher_id, scheduled_date } = req.body;
+    
+    if (!teacher_id || !scheduled_date) {
+      return res.status(400).json({
+        success: false,
+        error: 'teacher_id and scheduled_date are required'
+      });
+    }
+    
+    // Verify teacher is admin
+    const { data: teacher, error: teacherError } = await supabase
+      .from('students')
+      .select('is_admin')
+      .eq('student_id', teacher_id)
+      .single();
+    
+    if (teacherError || !teacher || !teacher.is_admin) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only teachers can update lesson dates'
+      });
+    }
+    
+    // Validate date format
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(scheduled_date)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid date format. Expected YYYY-MM-DD'
+      });
+    }
+    
+    // Validate that it's a valid date
+    const parsedDate = new Date(scheduled_date);
+    if (isNaN(parsedDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid date value'
+      });
+    }
+    
+    const { data: lesson, error } = await supabase
+      .from('lessons')
+      .update({ scheduled_date })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating lesson date:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update lesson date',
+        details: error.message
+      });
+    }
+    
+    if (!lesson) {
+      return res.status(404).json({
+        success: false,
+        error: 'Lesson not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: lesson
+    });
+    
+  } catch (error) {
+    console.error('Error in PUT /lessons/:id/date:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// PUT /api/lessons/:id/plan-items/reorder - Reorder lesson plan items within same lesson (teacher only)
+router.put('/:id/plan-items/reorder', async (req: Request, res: Response) => {
+  try {
+    const { id: lessonId } = req.params;
+    const { teacher_id, item_id, new_sort_order } = req.body;
+    
+    if (!teacher_id || !item_id || new_sort_order === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: 'teacher_id, item_id, and new_sort_order are required'
+      });
+    }
+    
+    // Verify teacher is admin
+    const { data: teacher, error: teacherError } = await supabase
+      .from('students')
+      .select('is_admin')
+      .eq('student_id', teacher_id)
+      .single();
+    
+    if (teacherError || !teacher || !teacher.is_admin) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only teachers can reorder lesson plan items'
+      });
+    }
+    
+    // Get the item to reorder
+    const { data: itemToMove, error: itemError } = await supabase
+      .from('lesson_plan_items')
+      .select('*')
+      .eq('id', item_id)
+      .eq('lesson_id', lessonId)
+      .single();
+    
+    if (itemError || !itemToMove) {
+      return res.status(404).json({
+        success: false,
+        error: 'Lesson plan item not found in this lesson'
+      });
+    }
+    
+    const oldSortOrder = itemToMove.sort_order;
+    
+    // Get all items in the lesson
+    const { data: allItems, error: allItemsError } = await supabase
+      .from('lesson_plan_items')
+      .select('id, sort_order')
+      .eq('lesson_id', lessonId)
+      .order('sort_order', { ascending: true });
+    
+    if (allItemsError || !allItems) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch lesson plan items'
+      });
+    }
+    
+    // Validate new_sort_order
+    if (new_sort_order < 0 || new_sort_order >= allItems.length) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid sort order position'
+      });
+    }
+    
+    // Reorder items
+    if (oldSortOrder !== new_sort_order) {
+      if (oldSortOrder < new_sort_order) {
+        // Moving down: shift items up
+        for (const item of allItems) {
+          if (item.id === item_id) {
+            await supabase
+              .from('lesson_plan_items')
+              .update({ sort_order: new_sort_order })
+              .eq('id', item_id);
+          } else if (item.sort_order > oldSortOrder && item.sort_order <= new_sort_order) {
+            await supabase
+              .from('lesson_plan_items')
+              .update({ sort_order: item.sort_order - 1 })
+              .eq('id', item.id);
+          }
+        }
+      } else {
+        // Moving up: shift items down
+        for (const item of allItems) {
+          if (item.id === item_id) {
+            await supabase
+              .from('lesson_plan_items')
+              .update({ sort_order: new_sort_order })
+              .eq('id', item_id);
+          } else if (item.sort_order >= new_sort_order && item.sort_order < oldSortOrder) {
+            await supabase
+              .from('lesson_plan_items')
+              .update({ sort_order: item.sort_order + 1 })
+              .eq('id', item.id);
+          }
+        }
+      }
+    }
+    
+    // Get updated lesson plan
+    const { data: updatedItems, error: updatedError } = await supabase
+      .from('lesson_plan_items')
+      .select('*')
+      .eq('lesson_id', lessonId)
+      .order('sort_order', { ascending: true });
+    
+    if (updatedError) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch updated lesson plan'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        lesson_id: lessonId,
+        reordered_items: updatedItems
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error in PUT /lessons/:id/plan-items/reorder:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// PUT /api/lessons/plan-items/:itemId/move - Move lesson plan item to different lesson (teacher only)
+router.put('/plan-items/:itemId/move', async (req: Request, res: Response) => {
+  try {
+    const { itemId } = req.params;
+    const { teacher_id, target_lesson_id, new_sort_order } = req.body;
+    
+    if (!teacher_id || !target_lesson_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'teacher_id and target_lesson_id are required'
+      });
+    }
+    
+    // Verify teacher is admin
+    const { data: teacher, error: teacherError } = await supabase
+      .from('students')
+      .select('is_admin')
+      .eq('student_id', teacher_id)
+      .single();
+    
+    if (teacherError || !teacher || !teacher.is_admin) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only teachers can move lesson plan items'
+      });
+    }
+    
+    // Get the current lesson plan item
+    const { data: currentItem, error: currentError } = await supabase
+      .from('lesson_plan_items')
+      .select('*')
+      .eq('id', itemId)
+      .single();
+    
+    if (currentError || !currentItem) {
+      return res.status(404).json({
+        success: false,
+        error: 'Lesson plan item not found'
+      });
+    }
+    
+    // Verify target lesson exists
+    const { data: targetLesson, error: targetError } = await supabase
+      .from('lessons')
+      .select('id')
+      .eq('id', target_lesson_id)
+      .single();
+    
+    if (targetError || !targetLesson) {
+      return res.status(404).json({
+        success: false,
+        error: 'Target lesson not found'
+      });
+    }
+    
+    // If no sort order provided, append to end of target lesson
+    let finalSortOrder = new_sort_order;
+    if (finalSortOrder === undefined) {
+      const { data: maxOrder } = await supabase
+        .from('lesson_plan_items')
+        .select('sort_order')
+        .eq('lesson_id', target_lesson_id)
+        .order('sort_order', { ascending: false })
+        .limit(1);
+      
+      finalSortOrder = maxOrder && maxOrder.length > 0 ? maxOrder[0].sort_order + 1 : 0;
+    }
+    
+    // Start transaction-like operations
+    // Update the item's lesson_id and sort_order
+    const { data: updatedItem, error: updateError } = await supabase
+      .from('lesson_plan_items')
+      .update({ 
+        lesson_id: target_lesson_id,
+        sort_order: finalSortOrder
+      })
+      .eq('id', itemId)
+      .select()
+      .single();
+    
+    if (updateError) {
+      console.error('Error moving lesson plan item:', updateError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to move lesson plan item',
+        details: updateError.message
+      });
+    }
+    
+    // Reorder items in target lesson if needed (move existing items down)
+    if (new_sort_order !== undefined) {
+      const { data: itemsToReorder } = await supabase
+        .from('lesson_plan_items')
+        .select('id, sort_order')
+        .eq('lesson_id', target_lesson_id)
+        .neq('id', itemId)
+        .gte('sort_order', new_sort_order)
+        .order('sort_order', { ascending: true });
+      
+      if (itemsToReorder && itemsToReorder.length > 0) {
+        for (const item of itemsToReorder) {
+          await supabase
+            .from('lesson_plan_items')
+            .update({ sort_order: item.sort_order + 1 })
+            .eq('id', item.id);
+        }
+      }
+    }
+    
+    // Clean up sort order gaps in source lesson
+    const { data: sourceItems } = await supabase
+      .from('lesson_plan_items')
+      .select('id, sort_order')
+      .eq('lesson_id', currentItem.lesson_id)
+      .order('sort_order', { ascending: true });
+    
+    if (sourceItems && sourceItems.length > 0) {
+      for (let i = 0; i < sourceItems.length; i++) {
+        if (sourceItems[i].sort_order !== i) {
+          await supabase
+            .from('lesson_plan_items')
+            .update({ sort_order: i })
+            .eq('id', sourceItems[i].id);
+        }
+      }
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        moved_item: updatedItem,
+        source_lesson_id: currentItem.lesson_id,
+        target_lesson_id: target_lesson_id
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error in PUT /lessons/plan-items/:itemId/move:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
 // POST /api/lessons/:id/progress - Update class-wide progress on lesson plan item (teacher only)
 router.post('/:id/progress', async (req: Request, res: Response) => {
   try {
