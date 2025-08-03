@@ -107,7 +107,7 @@ const QuizPage: React.FC = () => {
     try {
       setIsLoading(true);
       // Use smart learning algorithm by passing student_id
-      const questionsData = await getRandomQuizQuestions(5, selectedDifficulty, studentId, selectedQuestionType); 
+      const questionsData = await getRandomQuizQuestions(5, selectedDifficulty, studentId || undefined, selectedQuestionType); 
       setQuestions(questionsData);
       setIsLoading(false);
     } catch (error) {

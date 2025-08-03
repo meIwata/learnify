@@ -652,9 +652,9 @@ router.get('/questions/all/:student_id', async (req: Request, res: Response) => 
       const questionAttempts = attemptsByQuestion.get(question.id) || [];
       const latestAttempt = questionAttempts[0]; // Most recent attempt
       const totalAttempts = questionAttempts.length;
-      const correctAttempts = questionAttempts.filter(a => a.is_correct).length;
+      const correctAttempts = questionAttempts.filter((a: any) => a.is_correct).length;
       const accuracy = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 0;
-      const totalPoints = questionAttempts.reduce((sum, a) => sum + a.points_earned, 0);
+      const totalPoints = questionAttempts.reduce((sum: number, a: any) => sum + a.points_earned, 0);
 
       return {
         id: question.id,
