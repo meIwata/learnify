@@ -16,7 +16,7 @@ const UpcomingQuizzes: React.FC = () => {
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="font-semibold text-gray-900 mb-1">React Fundamentals</h4>
-              <p className="text-sm text-gray-600 mb-2">25 questions • 30 minutes</p>
+              <p className="text-sm text-gray-600 mb-2">20 questions • 30 minutes</p>
               <div className="flex items-center space-x-2">
                 <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Available Now</span>
               </div>
@@ -30,7 +30,7 @@ const UpcomingQuizzes: React.FC = () => {
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="font-semibold text-gray-900 mb-1">CSS Grid & Flexbox</h4>
-              <p className="text-sm text-gray-600 mb-2">20 questions • 25 minutes</p>
+              <p className="text-sm text-gray-600 mb-2">20 questions • 10 minutes</p>
               <div className="flex items-center space-x-2">
                 <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-full">Available Tomorrow</span>
               </div>

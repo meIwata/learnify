@@ -63,19 +63,30 @@ npm run lint            # Code linting
 
 ### Current Implementation Status
 - ✅ **Backend**: Complete check-in API with Supabase integration
+- ✅ **Smart Quiz System**: Adaptive learning algorithm with SwiftUI questions
 - ✅ **Local Dev**: Full local Supabase development stack
 - ✅ **Deployment**: Zeabur deployment configuration ready
-- 🔄 **macOS app**: Uses SwiftData for local storage (needs Supabase integration)
-- 📝 **Web frontend**: Directory structure created but empty
+- ✅ **macOS app**: Native SwiftUI app with quiz integration
+- ✅ **Web frontend**: React app with quiz functionality
 
 ## Key Features
 
 1. **Auto-Registration**: Student ID-based check-ins with automatic student creation
-2. **Gamification**: Daily check-ins, points system, leaderboards
-3. **Submissions**: Screenshot uploads and GitHub repository linking
-4. **Quizzes**: Multiple-choice quizzes with automatic grading
+2. **Smart Learning Quiz System**: Adaptive question selection based on learning patterns
+3. **Gamification**: Daily check-ins, points system, leaderboards
+4. **Submissions**: Screenshot uploads and GitHub repository linking
 5. **Admin Dashboard**: Instructor view with class-wide analytics
 6. **Awards System**: Instructor-awarded badges and recognition
+
+### 🧠 Smart Learning Quiz System
+**📖 [Complete Documentation](QUIZ_SYSTEM.md)**
+
+Intelligent quiz system that ensures students master SwiftUI fundamentals through:
+- **Adaptive Questions**: 60% incorrectly answered, 30% new, 10% reinforcement
+- **Second Chances**: Students can retry questions until mastered
+- **25 SwiftUI Questions**: Covering beginner to advanced concepts
+- **Cross-Platform**: Web and iOS implementations with real-time sync
+- **Performance Tracking**: Detailed analytics and progress monitoring
 
 ## Data Models
 

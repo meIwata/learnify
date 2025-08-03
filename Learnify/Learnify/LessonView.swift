@@ -80,6 +80,15 @@ struct LessonView: View {
             .refreshable {
                 await loadLessonsAsync()
             }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: SettingsView()) {
+                        Image(systemName: "gear")
+                            .font(.body)
+                            .fontWeight(.medium)
+                    }
+                }
+            }
         }
     }
     

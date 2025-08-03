@@ -426,4 +426,257 @@ export const deleteSubmission = async (submissionId: number): Promise<void> => {
   }
 };
 
+// Quiz interfaces
+export interface QuizQuestion {
+  id: number;
+  question_text: string;
+  question_category: string;
+  difficulty_level: number;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_answer: 'A' | 'B' | 'C' | 'D';
+  explanation?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QuizAttempt {
+  id: number;
+  student_id: string;
+  student_uuid: string;
+  question_id: number;
+  selected_answer: 'A' | 'B' | 'C' | 'D';
+  is_correct: boolean;
+  points_earned: number;
+  attempt_time_seconds?: number;
+  created_at: string;
+}
+
+export interface QuizScore {
+  id: number;
+  student_id: string;
+  student_uuid: string;
+  total_questions_attempted: number;
+  total_correct_answers: number;
+  total_points: number;
+  accuracy_percentage: number;
+  last_quiz_date?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RandomQuestionsResponse {
+  success: boolean;
+  data: {
+    questions: QuizQuestion[];
+    total_available: number;
+  };
+}
+
+export interface QuizSubmissionRequest {
+  student_id: string;
+  full_name?: string;
+  question_id: number;
+  selected_answer: 'A' | 'B' | 'C' | 'D';
+  attempt_time_seconds?: number;
+}
+
+export interface QuizSubmissionResponse {
+  success: boolean;
+  data: {
+    attempt: QuizAttempt;
+    is_correct: boolean;
+    points_earned: number;
+    correct_answer: 'A' | 'B' | 'C' | 'D';
+    explanation?: string;
+  };
+  message: string;
+}
+
+export interface StudentQuizScoresResponse {
+  success: boolean;
+  data: {
+    student: {
+      student_id: string;
+      full_name: string;
+      uuid: string;
+    };
+    quiz_scores: QuizScore;
+    recent_attempts: QuizAttempt[];
+    total_attempts: number;
+    showing: {
+      limit: number;
+      offset: number;
+    };
+  };
+}
+
+export interface StudentQuizAttemptsResponse {
+  success: boolean;
+  data: {
+    student: {
+      student_id: string;
+      full_name: string;
+      uuid: string;
+    };
+    attempts: QuizAttempt[];
+    total_attempts: number;
+    showing: {
+      limit: number;
+      offset: number;
+    };
+  };
+}
+
+export interface QuestionStats {
+  difficulty_level: number;
+  difficulty_name: string;
+  question_count: number;
+}
+
+export interface QuestionStatsResponse {
+  success: boolean;
+  data: {
+    total_questions: number;
+    difficulty_breakdown: QuestionStats[];
+    last_updated: string;
+  };
+}
+
+// Quiz API functions
+export const getRandomQuizQuestions = async (
+  count: number = 5, 
+  difficulty?: number, 
+  studentId?: string, 
+  questionType?: string
+): Promise<QuizQuestion[]> => {
+  const params: any = { count };
+  if (difficulty) params.difficulty = difficulty;
+  if (studentId) params.student_id = studentId;
+  if (questionType) params.question_type = questionType;
+  
+  const response = await api.get<RandomQuestionsResponse>('/api/quiz/questions/random', { params });
+  if (!response.data.success) {
+    throw new Error('Failed to fetch quiz questions');
+  }
+  return response.data.data.questions;
+};
+
+export const submitQuizAnswer = async (data: QuizSubmissionRequest): Promise<QuizSubmissionResponse['data']> => {
+  const response = await api.post<QuizSubmissionResponse>('/api/quiz/submit-answer', data);
+  if (!response.data.success) {
+    throw new Error('Failed to submit quiz answer');
+  }
+  return response.data.data;
+};
+
+export const getStudentQuizScores = async (studentId: string): Promise<StudentQuizScoresResponse['data']> => {
+  const response = await api.get<StudentQuizScoresResponse>(`/api/quiz/student/${studentId}/scores`);
+  if (!response.data.success) {
+    throw new Error('Failed to fetch student quiz scores');
+  }
+  return response.data.data;
+};
+
+export const getStudentQuizAttempts = async (
+  studentId: string, 
+  params?: { limit?: number; offset?: number }
+): Promise<StudentQuizAttemptsResponse['data']> => {
+  const response = await api.get<StudentQuizAttemptsResponse>(`/api/quiz/student/${studentId}/attempts`, { params });
+  if (!response.data.success) {
+    throw new Error('Failed to fetch student quiz attempts');
+  }
+  return response.data.data;
+};
+
+export const getQuestionStats = async (): Promise<QuestionStatsResponse['data']> => {
+  const response = await api.get<QuestionStatsResponse>('/api/quiz/questions/stats');
+  if (!response.data.success) {
+    throw new Error('Failed to fetch question statistics');
+  }
+  return response.data.data;
+};
+
+export interface QuestionWithAttempts {
+  id: number;
+  question_text: string;
+  question_category: string;
+  difficulty_level: number;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_answer: 'A' | 'B' | 'C' | 'D';
+  explanation?: string;
+  attempt_summary: {
+    total_attempts: number;
+    correct_attempts: number;
+    accuracy_percentage: number;
+    total_points: number;
+    latest_attempt: {
+      selected_answer: 'A' | 'B' | 'C' | 'D';
+      is_correct: boolean;
+      points_earned: number;
+      created_at: string;
+    } | null;
+    status: 'never_attempted' | 'mastered' | 'needs_practice';
+  };
+}
+
+export interface AllQuestionsResponse {
+  success: boolean;
+  data: {
+    student: {
+      student_id: string;
+      full_name: string;
+      uuid: string;
+    };
+    questions: QuestionWithAttempts[];
+    summary: {
+      total_questions: number;
+      attempted_questions: number;
+      mastered_questions: number;
+      never_attempted: number;
+      overall_accuracy: number;
+    };
+  };
+}
+
+export const checkStudentExists = async (studentId: string): Promise<boolean> => {
+  try {
+    const response = await api.get<StudentQuizScoresResponse>(`/api/quiz/student/${studentId}/scores`);
+    return response.data.success;
+  } catch (error: any) {
+    if (error?.response?.status === 404) {
+      return false;
+    }
+    // For other errors, assume student might exist but there's a different issue
+    return true;
+  }
+};
+
+export const getAllQuestionsWithAttempts = async (studentId: string): Promise<AllQuestionsResponse['data']> => {
+  const url = `/api/quiz/questions/all/${encodeURIComponent(studentId)}`;
+  console.log('Making API request to:', url);
+  console.log('Full API base URL:', API_BASE_URL);
+  
+  try {
+    const response = await api.get<AllQuestionsResponse>(url);
+    console.log('Response received:', response.status, response.data.success);
+    if (!response.data.success) {
+      throw new Error('Failed to fetch all questions with attempts');
+    }
+    return response.data.data;
+  } catch (error: any) {
+    console.error('API Error details:', error);
+    console.error('Request URL:', url);
+    console.error('Error status:', error?.response?.status);
+    console.error('Error data:', error?.response?.data);
+    throw error;
+  }
+};
+
 export default api;

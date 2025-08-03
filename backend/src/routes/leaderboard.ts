@@ -35,6 +35,9 @@ async function getLeaderboardData(): Promise<LeaderboardEntry[]> {
         id,
         submission_type,
         created_at
+      ),
+      student_quiz_scores (
+        total_points
       )
     `)
     .order('created_at', { ascending: true });
@@ -53,15 +56,18 @@ async function getLeaderboardData(): Promise<LeaderboardEntry[]> {
     const checkIns = student.student_check_ins || [];
     const reviews = student.student_reviews || [];
     const submissions = student.submissions || [];
+    const quizScores = student.student_quiz_scores?.[0]; // Get first (and only) quiz score record
     const totalCheckIns = checkIns.length;
     const totalReviews = reviews.length;
     const totalSubmissions = submissions.length;
     
     // Scoring: 10 marks for check-ins (if any), 10 marks for app review (if any), 10 marks for submissions (if any)
+    // Plus variable points from quiz (5 points per correct answer)
     let totalMarks = 0;
     if (totalCheckIns > 0) totalMarks += 10; // Check-in marks
     if (totalReviews > 0) totalMarks += 10;  // App review marks
     if (totalSubmissions > 0) totalMarks += 10; // Submission marks (any number of screenshots = 10 points)
+    if (quizScores?.total_points) totalMarks += quizScores.total_points; // Quiz points (5 per correct answer)
     
     // Find latest check-in
     const latestCheckIn = checkIns.length > 0 

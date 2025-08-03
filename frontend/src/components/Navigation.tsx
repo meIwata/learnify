@@ -25,7 +25,13 @@ const Navigation: React.FC = () => {
     checkAdminStatus();
   }, [studentId]);
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => {
+    if (path === '/quiz') {
+      // Show Quiz as active when on /quiz or /questions
+      return location.pathname === path || location.pathname === '/questions';
+    }
+    return location.pathname === path;
+  };
 
   const getInitials = (studentId: string): string => {
     return studentId.substring(0, 2).toUpperCase();
@@ -58,16 +64,6 @@ const Navigation: React.FC = () => {
               Dashboard
             </Link>
             <Link 
-              to="/reviews" 
-              className={`font-medium pb-1 transition-colors ${
-                isActive('/reviews') 
-                  ? 'text-blue-600 border-b-2 border-blue-600' 
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Reviews
-            </Link>
-            <Link 
               to="/lessons" 
               className={`font-medium pb-1 transition-colors ${
                 isActive('/lessons') 
@@ -78,6 +74,16 @@ const Navigation: React.FC = () => {
               Lessons
             </Link>
             <Link 
+              to="/reviews" 
+              className={`font-medium pb-1 transition-colors ${
+                isActive('/reviews') 
+                  ? 'text-blue-600 border-b-2 border-blue-600' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Reviews
+            </Link>
+            <Link 
               to="/submissions" 
               className={`font-medium pb-1 transition-colors ${
                 isActive('/submissions') 
@@ -86,6 +92,16 @@ const Navigation: React.FC = () => {
               }`}
             >
               Submissions
+            </Link>
+            <Link 
+              to="/quiz" 
+              className={`font-medium pb-1 transition-colors ${
+                isActive('/quiz') 
+                  ? 'text-blue-600 border-b-2 border-blue-600' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Quiz
             </Link>
             <Link 
               to="/leaderboard" 

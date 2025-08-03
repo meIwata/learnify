@@ -855,6 +855,297 @@ final class APIService: NSObject, URLSessionTaskDelegate {
         print("✅ Successfully updated lesson progress")
         return updateResponse.data.progress
     }
+    
+    // MARK: - Quiz Methods
+    
+    func getRandomQuizQuestions(count: Int = 5, difficulty: Int? = nil, studentId: String? = nil, questionType: String? = nil) async throws -> [QuizQuestion] {
+        var urlComponents = URLComponents(string: "\(baseURL)/api/quiz/questions/random")!
+        
+        var queryItems: [URLQueryItem] = [URLQueryItem(name: "count", value: String(count))]
+        if let difficulty = difficulty {
+            queryItems.append(URLQueryItem(name: "difficulty", value: String(difficulty)))
+        }
+        if let studentId = studentId {
+            queryItems.append(URLQueryItem(name: "student_id", value: studentId))
+        }
+        if let questionType = questionType {
+            queryItems.append(URLQueryItem(name: "question_type", value: questionType))
+        }
+        urlComponents.queryItems = queryItems
+        
+        guard let url = urlComponents.url else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        print("📤 Fetching \(count) random quiz questions")
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        config.timeoutIntervalForResource = 60.0
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.httpMaximumConnectionsPerHost = 1
+        let session = URLSession(configuration: config)
+
+        let maxRetries = 3
+        var lastError: Error?
+
+        for attempt in 1...maxRetries {
+            do {
+                print("🔄 Quiz questions request attempt \(attempt)/\(maxRetries)")
+                let (data, response) = try await session.data(for: request)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    print("❌ Invalid response type for quiz questions")
+                    throw APIError.invalidResponse
+                }
+                
+                print("✅ Quiz questions HTTP Status: \(httpResponse.statusCode)")
+                
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    print("❌ Quiz questions server error: \(httpResponse.statusCode)")
+                    throw APIError.serverError(httpResponse.statusCode)
+                }
+                
+                let questionsResponse = try JSONDecoder().decode(RandomQuestionsResponse.self, from: data)
+                print("✅ Successfully fetched \(questionsResponse.data.questions.count) quiz questions")
+                return questionsResponse.data.questions
+                
+            } catch let error as URLError where error.code == .networkConnectionLost && attempt < maxRetries {
+                print("⚠️ Network connection lost fetching quiz questions (Attempt \(attempt)/\(maxRetries)). Error: \(error)")
+                lastError = error
+                try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                continue
+            } catch {
+                print("❌ Quiz questions request failed with error: \(error)")
+                throw error
+            }
+        }
+        throw lastError ?? APIError.networkError("Failed to fetch quiz questions after multiple retries.")
+    }
+    
+    func submitQuizAnswer(studentId: String, fullName: String, questionId: Int, selectedAnswer: String, attemptTimeSeconds: Int? = nil) async throws -> QuizSubmissionData {
+        let url = URL(string: "\(baseURL)/api/quiz/submit-answer")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        let submissionData = QuizSubmissionRequest(
+            student_id: studentId,
+            full_name: fullName,
+            question_id: questionId,
+            selected_answer: selectedAnswer,
+            attempt_time_seconds: attemptTimeSeconds
+        )
+        
+        print("📤 Submitting quiz answer: \(studentId) - Question \(questionId) - Answer \(selectedAnswer)")
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        config.timeoutIntervalForResource = 60.0
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.httpMaximumConnectionsPerHost = 1
+        let session = URLSession(configuration: config)
+
+        let maxRetries = 3
+        var lastError: Error?
+
+        for attempt in 1...maxRetries {
+            do {
+                let jsonData = try JSONEncoder().encode(submissionData)
+                request.httpBody = jsonData
+                
+                print("🔄 Quiz submission attempt \(attempt)/\(maxRetries)")
+                let (data, response) = try await session.data(for: request)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    print("❌ Invalid response type for quiz submission")
+                    throw APIError.invalidResponse
+                }
+                
+                print("✅ Quiz submission HTTP Status: \(httpResponse.statusCode)")
+                
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    print("❌ Quiz submission server error: \(httpResponse.statusCode)")
+                    throw APIError.serverError(httpResponse.statusCode)
+                }
+                
+                let submissionResponse = try JSONDecoder().decode(QuizSubmissionResponse.self, from: data)
+                print("✅ Quiz answer submitted successfully - \(submissionResponse.data.is_correct ? "Correct" : "Incorrect")")
+                return submissionResponse.data
+                
+            } catch let error as URLError where error.code == .networkConnectionLost && attempt < maxRetries {
+                print("⚠️ Network connection lost submitting quiz answer (Attempt \(attempt)/\(maxRetries)). Error: \(error)")
+                lastError = error
+                try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                continue
+            } catch {
+                print("❌ Quiz submission failed with error: \(error)")
+                throw error
+            }
+        }
+        throw lastError ?? APIError.networkError("Failed to submit quiz answer after multiple retries.")
+    }
+    
+    func getStudentQuizScores(studentId: String) async throws -> StudentQuizScoresData {
+        let url = URL(string: "\(baseURL)/api/quiz/student/\(studentId)/scores")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        print("📤 Fetching quiz scores for student: \(studentId)")
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        config.timeoutIntervalForResource = 60.0
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.httpMaximumConnectionsPerHost = 1
+        let session = URLSession(configuration: config)
+
+        let maxRetries = 3
+        var lastError: Error?
+
+        for attempt in 1...maxRetries {
+            do {
+                print("🔄 Student quiz scores request attempt \(attempt)/\(maxRetries)")
+                let (data, response) = try await session.data(for: request)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    print("❌ Invalid response type for student quiz scores")
+                    throw APIError.invalidResponse
+                }
+                
+                print("✅ Student quiz scores HTTP Status: \(httpResponse.statusCode)")
+                
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    print("❌ Student quiz scores server error: \(httpResponse.statusCode)")
+                    throw APIError.serverError(httpResponse.statusCode)
+                }
+                
+                let scoresResponse = try JSONDecoder().decode(StudentQuizScoresResponse.self, from: data)
+                print("✅ Successfully fetched quiz scores for \(scoresResponse.data.student.full_name)")
+                return scoresResponse.data
+                
+            } catch let error as URLError where error.code == .networkConnectionLost && attempt < maxRetries {
+                print("⚠️ Network connection lost fetching quiz scores (Attempt \(attempt)/\(maxRetries)). Error: \(error)")
+                lastError = error
+                try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                continue
+            } catch {
+                print("❌ Quiz scores request failed with error: \(error)")
+                throw error
+            }
+        }
+        throw lastError ?? APIError.networkError("Failed to fetch quiz scores after multiple retries.")
+    }
+    
+    func getQuestionStats() async throws -> QuestionStatsData {
+        let url = URL(string: "\(baseURL)/api/quiz/questions/stats")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        print("📤 Fetching question statistics")
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        config.timeoutIntervalForResource = 60.0
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.httpMaximumConnectionsPerHost = 1
+        let session = URLSession(configuration: config)
+
+        let maxRetries = 3
+        var lastError: Error?
+
+        for attempt in 1...maxRetries {
+            do {
+                print("🔄 Question stats request attempt \(attempt)/\(maxRetries)")
+                let (data, response) = try await session.data(for: request)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    print("❌ Invalid response type for question stats")
+                    throw APIError.invalidResponse
+                }
+                
+                print("✅ Question stats HTTP Status: \(httpResponse.statusCode)")
+                
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    print("❌ Question stats server error: \(httpResponse.statusCode)")
+                    throw APIError.serverError(httpResponse.statusCode)
+                }
+                
+                let statsResponse = try JSONDecoder().decode(QuestionStatsResponse.self, from: data)
+                print("✅ Successfully fetched question statistics")
+                return statsResponse.data
+                
+            } catch let error as URLError where error.code == .networkConnectionLost && attempt < maxRetries {
+                print("⚠️ Network connection lost fetching question stats (Attempt \(attempt)/\(maxRetries)). Error: \(error)")
+                lastError = error
+                try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                continue
+            } catch {
+                print("❌ Question stats request failed with error: \(error)")
+                throw error
+            }
+        }
+        throw lastError ?? APIError.networkError("Failed to fetch question stats after multiple retries.")
+    }
+    
+    func getAllQuestionsWithAttempts(studentId: String) async throws -> AllQuestionsData {
+        let url = URL(string: "\(baseURL)/api/quiz/questions/all/\(studentId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        print("📤 Fetching all questions with attempts for student: \(studentId)")
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        config.timeoutIntervalForResource = 60.0
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.httpMaximumConnectionsPerHost = 1
+        let session = URLSession(configuration: config)
+
+        let maxRetries = 3
+        var lastError: Error?
+
+        for attempt in 1...maxRetries {
+            do {
+                print("🔄 All questions with attempts request attempt \(attempt)/\(maxRetries)")
+                let (data, response) = try await session.data(for: request)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    print("❌ Invalid response type for all questions with attempts")
+                    throw APIError.invalidResponse
+                }
+                
+                print("✅ All questions with attempts HTTP Status: \(httpResponse.statusCode)")
+                
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    print("❌ All questions with attempts server error: \(httpResponse.statusCode)")
+                    throw APIError.serverError(httpResponse.statusCode)
+                }
+                
+                let questionsResponse = try JSONDecoder().decode(AllQuestionsResponse.self, from: data)
+                print("✅ Successfully fetched \(questionsResponse.data.questions.count) questions with attempts")
+                return questionsResponse.data
+                
+            } catch let error as URLError where error.code == .networkConnectionLost && attempt < maxRetries {
+                print("⚠️ Network connection lost fetching all questions with attempts (Attempt \(attempt)/\(maxRetries)). Error: \(error)")
+                lastError = error
+                try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                continue
+            } catch {
+                print("❌ All questions with attempts request failed with error: \(error)")
+                throw error
+            }
+        }
+        throw lastError ?? APIError.networkError("Failed to fetch all questions with attempts after multiple retries.")
+    }
 }
 
 // MARK: - Data Models
@@ -917,10 +1208,10 @@ struct StudentReview: Codable, Identifiable {
     let mobile_app_name: String
     let review_text: String
     let created_at: String
-    let students: StudentInfo?
+    let students: ReviewStudentInfo?
 }
 
-struct StudentInfo: Codable {
+struct ReviewStudentInfo: Codable {
     let full_name: String
 }
 
@@ -1165,4 +1456,168 @@ struct Submission: Codable, Identifiable {
     let student_name: String?
     let created_at: String
     let updated_at: String
+}
+
+// MARK: - Quiz Data Models
+
+struct QuizQuestion: Codable, Identifiable {
+    let id: Int
+    let question_text: String
+    let question_category: String
+    let difficulty_level: Int
+    let option_a: String
+    let option_b: String
+    let option_c: String
+    let option_d: String
+    
+    var options: [String] {
+        [option_a, option_b, option_c, option_d]
+    }
+}
+
+struct QuizSubmissionRequest: Codable {
+    let student_id: String
+    let full_name: String?
+    let question_id: Int
+    let selected_answer: String
+    let attempt_time_seconds: Int?
+}
+
+struct QuizSubmissionResponse: Codable {
+    let success: Bool
+    let data: QuizSubmissionData
+    let message: String
+}
+
+struct QuizSubmissionData: Codable {
+    let attempt: QuizAttempt
+    let is_correct: Bool
+    let points_earned: Int
+    let correct_answer: String
+    let explanation: String?
+}
+
+struct QuizAttempt: Codable {
+    let id: Int
+    let student_id: String
+    let student_uuid: String
+    let question_id: Int
+    let selected_answer: String
+    let is_correct: Bool
+    let points_earned: Int
+    let attempt_time_seconds: Int?
+    let created_at: String
+}
+
+struct RandomQuestionsResponse: Codable {
+    let success: Bool
+    let data: RandomQuestionsData
+}
+
+struct RandomQuestionsData: Codable {
+    let questions: [QuizQuestion]
+    let total_available: Int
+}
+
+struct StudentQuizScoresResponse: Codable {
+    let success: Bool
+    let data: StudentQuizScoresData
+}
+
+struct StudentQuizScoresData: Codable {
+    let student: StudentInfo
+    let quiz_scores: QuizScore?
+    let recent_attempts: [QuizAttempt]
+    let total_attempts: Int
+}
+
+struct QuizScore: Codable {
+    let id: Int
+    let student_id: String
+    let student_uuid: String
+    let total_questions_attempted: Int
+    let total_correct_answers: Int
+    let total_points: Int
+    let accuracy_percentage: Double
+    let last_quiz_date: String?
+    let created_at: String
+    let updated_at: String
+}
+
+struct StudentInfo: Codable {
+    let student_id: String
+    let full_name: String
+    let uuid: String
+}
+
+struct QuestionStatItem: Codable {
+    let difficulty_level: Int
+    let difficulty_name: String
+    let question_count: Int
+}
+
+struct QuestionStatsResponse: Codable {
+    let success: Bool
+    let data: QuestionStatsData
+}
+
+struct QuestionStatsData: Codable {
+    let total_questions: Int
+    let difficulty_breakdown: [QuestionStatItem]
+    let last_updated: String
+}
+
+// MARK: - All Questions with Attempts Data Models
+
+struct QuestionWithAttempts: Codable, Identifiable {
+    let id: Int
+    let question_text: String
+    let question_category: String
+    let difficulty_level: Int
+    let option_a: String
+    let option_b: String
+    let option_c: String
+    let option_d: String
+    let correct_answer: String
+    let explanation: String?
+    let attempt_summary: AttemptSummary
+    
+    var options: [String] {
+        [option_a, option_b, option_c, option_d]
+    }
+}
+
+struct AttemptSummary: Codable {
+    let total_attempts: Int
+    let correct_attempts: Int
+    let accuracy_percentage: Int
+    let total_points: Int
+    let latest_attempt: LatestAttempt?
+    let status: String
+}
+
+struct LatestAttempt: Codable {
+    let selected_answer: String
+    let is_correct: Bool
+    let points_earned: Int
+    let created_at: String
+}
+
+struct QuestionsSummary: Codable {
+    let total_questions: Int
+    let attempted_questions: Int
+    let mastered_questions: Int
+    let never_attempted: Int
+    let overall_accuracy: Int
+}
+
+struct AllQuestionsResponse: Codable {
+    let success: Bool
+    let data: AllQuestionsData
+}
+
+struct AllQuestionsData: Codable {
+    let student: StudentInfo
+    let questions: [QuestionWithAttempts]
+    let summary: QuestionsSummary
 }

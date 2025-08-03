@@ -15,6 +15,7 @@ import leaderboardRouter from './routes/leaderboard';
 import adminRouter from './routes/admin';
 import lessonsRouter from './routes/lessons';
 import submissionsRouter from './routes/submissions';
+import quizRouter from './routes/quiz';
 import { config } from './config/supabase';
 
 // Load environment variables
@@ -63,6 +64,7 @@ app.use('/api', leaderboardRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/lessons', lessonsRouter);
 app.use('/api/submissions', submissionsRouter);
+app.use('/api/quiz', quizRouter);
 
 // Root endpoint
 app.get('/', (req: Request, res: Response) => {
