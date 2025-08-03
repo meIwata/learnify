@@ -1,25 +1,25 @@
 //
-//  DashboardView.swift
+//  SubmissionsContainerView.swift
 //  Learnify
 //
-//  Created by Harry Taiwan on 2025/7/15.
+//  Created by Claude on 2025/8/3.
 //
 
 import SwiftUI
 
-struct DashboardView: View {
+struct SubmissionsContainerView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     // Header Section
                     VStack(spacing: 8) {
-                        Text("Dashboard")
+                        Text("Submissions")
                             .font(.largeTitle)
                             .fontWeight(.bold)
                             .foregroundStyle(.primary)
                         
-                        Text("Welcome to Learnify")
+                        Text("Submit work, review others, and take quizzes")
                             .font(.title3)
                             .foregroundStyle(.secondary)
                     }
@@ -27,14 +27,14 @@ struct DashboardView: View {
                     
                     // Navigation Cards
                     VStack(spacing: 16) {
-                        // Check In Card
-                        NavigationLink(destination: CheckInView()) {
-                            DashboardCard(
-                                icon: "checkmark.circle",
-                                title: "Check In",
-                                subtitle: "Submit your daily check-in to earn points",
+                        // Submit Card
+                        NavigationLink(destination: SubmissionView()) {
+                            SubmissionsDashboardCard(
+                                icon: "arrow.up.doc",
+                                title: "Submit",
+                                subtitle: "Upload your assignments and projects",
                                 gradient: LinearGradient(
-                                    colors: [.green, .cyan],
+                                    colors: [.blue, .indigo],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -42,14 +42,14 @@ struct DashboardView: View {
                         }
                         .buttonStyle(PlainButtonStyle())
                         
-                        // Students Card
-                        NavigationLink(destination: StudentsListView()) {
-                            DashboardCard(
-                                icon: "person.3",
-                                title: "Students",
-                                subtitle: "View and manage student profiles",
+                        // Review Card
+                        NavigationLink(destination: ReviewSubmissionView()) {
+                            SubmissionsDashboardCard(
+                                icon: "bubble.left.and.bubble.right",
+                                title: "Review",
+                                subtitle: "Review and provide feedback on submissions",
                                 gradient: LinearGradient(
-                                    colors: [.blue, .purple],
+                                    colors: [.orange, .pink],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -57,29 +57,14 @@ struct DashboardView: View {
                         }
                         .buttonStyle(PlainButtonStyle())
                         
-                        // All Reviews Card
-                        NavigationLink(destination: ReviewsListView()) {
-                            DashboardCard(
-                                icon: "list.bullet.rectangle",
-                                title: "All Reviews",
-                                subtitle: "Browse all submitted reviews",
+                        // Quiz Card
+                        NavigationLink(destination: QuizView()) {
+                            SubmissionsDashboardCard(
+                                icon: "brain.head.profile",
+                                title: "Quiz",
+                                subtitle: "Test your knowledge and learn new concepts",
                                 gradient: LinearGradient(
-                                    colors: [.green, .mint],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        
-                        // Leaderboard Card
-                        NavigationLink(destination: LeaderboardView()) {
-                            DashboardCard(
-                                icon: "trophy.fill",
-                                title: "Leaderboard",
-                                subtitle: "View rankings and achievements",
-                                gradient: LinearGradient(
-                                    colors: [.orange, .red],
+                                    colors: [.purple, .pink],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -106,7 +91,7 @@ struct DashboardView: View {
     }
 }
 
-struct DashboardCard: View {
+struct SubmissionsDashboardCard: View {
     let icon: String
     let title: String
     let subtitle: String
@@ -155,5 +140,5 @@ struct DashboardCard: View {
 }
 
 #Preview {
-    DashboardView()
+    SubmissionsContainerView()
 }

@@ -16,40 +16,16 @@ struct ContentView: View {
                     Text("Dashboard")
                 }
             
-            CheckInView()
-                .tabItem {
-                    Image(systemName: "checkmark.circle")
-                    Text("Check In")
-                }
-            
             LessonView()
                 .tabItem {
                     Image(systemName: "book")
-                    Text("Lesson")
+                    Text("Lessons")
                 }
             
-            SubmissionView()
+            SubmissionsContainerView()
                 .tabItem {
-                    Image(systemName: "arrow.up.doc")
-                    Text("Submit")
-                }
-            
-            ReviewSubmissionView()
-                .tabItem {
-                    Image(systemName: "bubble.left.and.bubble.right")
-                    Text("Review")
-                }
-            
-            QuizView()
-                .tabItem {
-                    Image(systemName: "brain.head.profile")
-                    Text("Quiz")
-                }
-            
-            SettingsView()
-                .tabItem {
-                    Image(systemName: "gear")
-                    Text("Settings")
+                    Image(systemName: "folder")
+                    Text("Submissions")
                 }
         }
         .accentColor(.blue)

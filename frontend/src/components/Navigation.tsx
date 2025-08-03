@@ -64,16 +64,6 @@ const Navigation: React.FC = () => {
               Dashboard
             </Link>
             <Link 
-              to="/reviews" 
-              className={`font-medium pb-1 transition-colors ${
-                isActive('/reviews') 
-                  ? 'text-blue-600 border-b-2 border-blue-600' 
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Reviews
-            </Link>
-            <Link 
               to="/lessons" 
               className={`font-medium pb-1 transition-colors ${
                 isActive('/lessons') 
@@ -82,6 +72,16 @@ const Navigation: React.FC = () => {
               }`}
             >
               Lessons
+            </Link>
+            <Link 
+              to="/reviews" 
+              className={`font-medium pb-1 transition-colors ${
+                isActive('/reviews') 
+                  ? 'text-blue-600 border-b-2 border-blue-600' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Reviews
             </Link>
             <Link 
               to="/submissions" 
