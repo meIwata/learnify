@@ -79,7 +79,7 @@ INSERT INTO quiz_questions (question_text, difficulty_level, option_a, option_b,
  'B', 'The .background() modifier is used to apply background colors or views.'),
 
 ('What is the correct syntax for creating a Button in SwiftUI?', 1,
- 'Button("Title") { action }', 'Button(action: { }, label: "Title")', 'UIButton("Title", action: { })', 'ActionButton("Title") { }',
+ 'Button("Title") { // action }', 'Button(action: { }, label: "Title")', 'UIButton("Title", action: { })', 'ActionButton("Title") { }',
  'A', 'The most common Button syntax uses a string title and trailing closure for the action.'),
 
 ('Which navigation container should you use for iOS 16+ SwiftUI apps?', 1,
