@@ -11,7 +11,7 @@ const ReviewsPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pt-16">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-700 text-white">
         <div className="max-w-6xl mx-auto px-4 py-8">
