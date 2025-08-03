@@ -71,6 +71,21 @@ struct DashboardView: View {
                             )
                         }
                         .buttonStyle(PlainButtonStyle())
+                        
+                        // Question Overview Card
+                        NavigationLink(destination: QuestionOverviewView()) {
+                            DashboardCard(
+                                icon: "questionmark.circle.fill",
+                                title: "Question Overview",
+                                subtitle: "Review all quiz questions and your performance",
+                                gradient: LinearGradient(
+                                    colors: [.purple, .pink],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                     .padding(.horizontal)
                     

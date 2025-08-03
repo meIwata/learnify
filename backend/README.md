@@ -5,11 +5,17 @@ Node.js + TypeScript + Express backend for the Learnify gamified learning system
 ## Features
 
 - ✅ Auto-registration check-in API (no cooldown)
+- ✅ **Smart Learning Quiz System** with adaptive question selection
 - ✅ Supabase integration with local development support
 - ✅ Student ID-based authentication (no JWT required)
 - ✅ TypeScript for type safety
 - ✅ Comprehensive error handling
 - ✅ Zeabur deployment ready
+
+### 🧠 Smart Learning Quiz System
+Intelligent quiz system that adapts to student learning patterns, ensuring mastery of SwiftUI fundamentals through targeted practice and second chances.
+
+**📖 [Complete Quiz System Documentation](../QUIZ_SYSTEM.md)**
 
 ## Quick Start
 
@@ -108,7 +114,34 @@ Get all registered students (admin use).
 ### GET /health
 Health check endpoint for monitoring.
 
-See `API_DESIGN.md` for complete API documentation.
+### Quiz API Endpoints
+
+#### GET /api/quiz/questions/random
+Get smart quiz questions with adaptive learning algorithm.
+
+**Query Parameters:**
+- `count`: Number of questions (default: 5, max: 20)
+- `difficulty`: Difficulty level 1-3 (optional)
+- `student_id`: **Required for smart learning algorithm**
+
+#### POST /api/quiz/submit-answer
+Submit quiz answer and get immediate feedback.
+
+**Request Body:**
+```json
+{
+  "student_id": "ALICE2025",
+  "full_name": "Alice Johnson",
+  "question_id": 1,
+  "selected_answer": "A",
+  "attempt_time_seconds": 15
+}
+```
+
+#### GET /api/quiz/student/:student_id/scores
+Get student's quiz performance statistics.
+
+See `API_DESIGN.md` and **[QUIZ_SYSTEM.md](../QUIZ_SYSTEM.md)** for complete API documentation.
 
 ## Environment Variables
 
@@ -150,7 +183,7 @@ npm start
 
 ## Database Schema
 
-Current simplified schema for auto-registration:
+Current schema includes student management and smart quiz system:
 
 ```sql
 -- Students table - Auto-registration support
@@ -174,6 +207,13 @@ CREATE INDEX idx_students_student_id ON students(student_id);
 CREATE INDEX idx_student_check_ins_student_id ON student_check_ins(student_id);
 CREATE INDEX idx_student_check_ins_created ON student_check_ins(created_at DESC);
 ```
+
+**Quiz System Tables:**
+- `quiz_questions` - SwiftUI questions with multiple choice answers
+- `student_quiz_attempts` - Individual question attempts with scoring
+- `student_quiz_scores` - Aggregated performance statistics
+
+See **[QUIZ_SYSTEM.md](../QUIZ_SYSTEM.md)** for complete schema documentation.
 
 Migrations are managed in `supabase/migrations/` directory.
 

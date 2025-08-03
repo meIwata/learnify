@@ -40,6 +40,12 @@ struct ContentView: View {
                     Text("Review")
                 }
             
+            QuizView()
+                .tabItem {
+                    Image(systemName: "brain.head.profile")
+                    Text("Quiz")
+                }
+            
             SettingsView()
                 .tabItem {
                     Image(systemName: "gear")

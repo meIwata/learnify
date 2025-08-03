@@ -280,7 +280,7 @@ struct SubmissionView: View {
             }
         }
         .photosPicker(isPresented: $showingPhotoPicker, selection: $selectedImage, matching: .images)
-        .onChange(of: selectedImage) { newValue in
+        .onChange(of: selectedImage) { _, newValue in
             Task {
                 if let data = try? await newValue?.loadTransferable(type: Data.self) {
                     selectedImageData = data
@@ -352,7 +352,7 @@ struct SubmissionView: View {
         
         Task {
             do {
-                let result = try await APIService.shared.submitSubmission(
+                let _ = try await APIService.shared.submitSubmission(
                     studentId: storedStudentId,
                     fullName: storedStudentName,
                     submissionType: submissionType.rawValue,
