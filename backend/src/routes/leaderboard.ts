@@ -10,80 +10,98 @@ interface LeaderboardEntry {
   total_check_ins: number;
   latest_check_in: string | null;
   rank: number;
+  points_breakdown?: {
+    check_in_points: number;
+    review_points: number;
+    midterm_project_points: number;
+    final_project_points: number;
+    project_notes_points: number;
+    voting_points: number;
+    quiz_points: number;
+    bonus_points: number;
+  };
 }
 
 /**
  * Shared function to get leaderboard data
  */
 async function getLeaderboardData(): Promise<LeaderboardEntry[]> {
-  // Query to get leaderboard data with scores calculated
-  const { data: leaderboardData, error } = await supabase
+  // Get all students
+  const { data: studentsData, error: studentsError } = await supabase
     .from('students')
-    .select(`
-      student_id,
-      full_name,
-      created_at,
-      student_check_ins (
-        id,
-        created_at
-      ),
-      student_reviews (
-        id,
-        created_at
-      ),
-      submissions (
-        id,
-        submission_type,
-        created_at
-      ),
-      student_quiz_scores (
-        total_points
-      )
-    `)
+    .select('student_id, full_name, created_at')
     .order('created_at', { ascending: true });
 
-  if (error) {
-    console.error('Database error:', error);
-    throw new Error('Failed to fetch leaderboard data');
+  if (studentsError) {
+    console.error('Database error:', studentsError);
+    throw new Error('Failed to fetch students data');
   }
 
-  if (!leaderboardData) {
+  if (!studentsData) {
     return [];
   }
 
-  // Calculate scores and prepare leaderboard entries
-  const leaderboardEntries: Omit<LeaderboardEntry, 'rank'>[] = leaderboardData.map(student => {
-    const checkIns = student.student_check_ins || [];
-    const reviews = student.student_reviews || [];
-    const submissions = student.submissions || [];
-    const quizScores = student.student_quiz_scores?.[0]; // Get first (and only) quiz score record
-    const totalCheckIns = checkIns.length;
-    const totalReviews = reviews.length;
-    const totalSubmissions = submissions.length;
-    
-    // Scoring: 10 marks for check-ins (if any), 10 marks for app review (if any), 10 marks for submissions (if any)
-    // Plus variable points from quiz (5 points per correct answer)
-    let totalMarks = 0;
-    if (totalCheckIns > 0) totalMarks += 10; // Check-in marks
-    if (totalReviews > 0) totalMarks += 10;  // App review marks
-    if (totalSubmissions > 0) totalMarks += 10; // Submission marks (any number of screenshots = 10 points)
-    if (quizScores?.total_points) totalMarks += quizScores.total_points; // Quiz points (5 per correct answer)
-    
-    // Find latest check-in
-    const latestCheckIn = checkIns.length > 0 
-      ? checkIns.reduce((latest, current) => 
-          new Date(current.created_at) > new Date(latest.created_at) ? current : latest
-        ).created_at
-      : null;
+  // Get points breakdown for each student using the database function
+  const leaderboardEntries: Omit<LeaderboardEntry, 'rank'>[] = await Promise.all(
+    studentsData.map(async (student) => {
+      // Get points breakdown from database function
+      const { data: pointsData, error: pointsError } = await supabase
+        .rpc('get_student_points_breakdown', { p_student_id: student.student_id });
 
-    return {
-      student_id: student.student_id,
-      full_name: student.full_name,
-      total_marks: totalMarks,
-      total_check_ins: totalCheckIns,
-      latest_check_in: latestCheckIn
-    };
-  });
+      if (pointsError || !pointsData || pointsData.length === 0) {
+        console.error('Error getting points breakdown for student:', student.student_id, pointsError);
+        // Fallback with zero points
+        const fallbackBreakdown = {
+          check_in_points: 0,
+          review_points: 0,
+          midterm_project_points: 0,
+          final_project_points: 0,
+          project_notes_points: 0,
+          voting_points: 0,
+          quiz_points: 0,
+          bonus_points: 0
+        };
+        return {
+          student_id: student.student_id,
+          full_name: student.full_name,
+          total_marks: 0,
+          total_check_ins: 0,
+          latest_check_in: null,
+          points_breakdown: fallbackBreakdown
+        };
+      }
+
+      const breakdown = pointsData[0];
+      
+      // Get check-ins data for latest check-in info
+      const { data: checkInsData } = await supabase
+        .from('student_check_ins')
+        .select('created_at')
+        .eq('student_id', student.student_id)
+        .order('created_at', { ascending: false });
+
+      const totalCheckIns = checkInsData?.length || 0;
+      const latestCheckIn = checkInsData && checkInsData.length > 0 ? checkInsData[0].created_at : null;
+
+      return {
+        student_id: student.student_id,
+        full_name: student.full_name,
+        total_marks: breakdown.total_points,
+        total_check_ins: totalCheckIns,
+        latest_check_in: latestCheckIn,
+        points_breakdown: {
+          check_in_points: breakdown.check_in_points,
+          review_points: breakdown.review_points,
+          midterm_project_points: breakdown.midterm_project_points,
+          final_project_points: breakdown.final_project_points,
+          project_notes_points: breakdown.project_notes_points,
+          voting_points: breakdown.voting_points,
+          quiz_points: breakdown.quiz_points,
+          bonus_points: breakdown.bonus_points
+        }
+      };
+    })
+  );
 
   // Sort by ranking criteria
   const sortedEntries = leaderboardEntries.sort((a, b) => {
@@ -213,6 +231,66 @@ router.get('/leaderboard/student/:student_id', async (req: Request, res: Respons
 
   } catch (error) {
     console.error('Student leaderboard error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'INTERNAL_ERROR',
+      message: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * POST /api/leaderboard/calculate-bonus/:projectType
+ * Manually calculate and award bonus points for most voted project
+ */
+router.post('/calculate-bonus/:projectType', async (req: Request, res: Response) => {
+  try {
+    const { projectType } = req.params;
+
+    if (!['midterm', 'final'].includes(projectType)) {
+      return res.status(400).json({
+        success: false,
+        error: 'INVALID_PROJECT_TYPE',
+        message: 'Project type must be "midterm" or "final"'
+      });
+    }
+
+    // Call the database function to award bonus
+    const { data, error } = await supabase
+      .rpc('award_vote_winner_bonus', { p_project_type: projectType });
+
+    if (error) {
+      console.error('Bonus calculation error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'CALCULATION_ERROR',
+        message: 'Failed to calculate bonus points'
+      });
+    }
+
+    if (!data || data.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: `No bonus awarded for ${projectType} projects (no votes or bonus already awarded)`,
+        data: null
+      });
+    }
+
+    const bonusResult = data[0];
+    
+    res.status(200).json({
+      success: true,
+      message: `Bonus points awarded successfully for ${projectType} project`,
+      data: {
+        submission_id: bonusResult.submission_id,
+        bonus_awarded: bonusResult.bonus_awarded,
+        vote_count: bonusResult.vote_count,
+        project_type: projectType
+      }
+    });
+
+  } catch (error) {
+    console.error('Bonus calculation error:', error);
     res.status(500).json({
       success: false,
       error: 'INTERNAL_ERROR',

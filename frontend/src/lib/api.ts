@@ -46,6 +46,16 @@ export interface LeaderboardEntry {
   total_check_ins: number;
   latest_check_in: string | null;
   rank: number;
+  points_breakdown?: {
+    check_in_points: number;
+    review_points: number;
+    midterm_project_points: number;
+    final_project_points: number;
+    project_notes_points: number;
+    voting_points: number;
+    quiz_points: number;
+    bonus_points: number;
+  };
 }
 
 // API functions
@@ -152,6 +162,14 @@ export const getLeaderboard = async (limit: number = 50, offset: number = 0): Pr
     throw new Error('Failed to fetch leaderboard');
   }
   return response.data.data.leaderboard;
+};
+
+export const getStudentLeaderboardData = async (studentId: string): Promise<LeaderboardEntry> => {
+  const response = await api.get<{success: boolean, data: {student: LeaderboardEntry}}>(`/api/leaderboard/student/${studentId}`);
+  if (!response.data.success || !response.data.data.student) {
+    throw new Error('Failed to fetch student leaderboard data');
+  }
+  return response.data.data.student;
 };
 
 // Admin API functions
@@ -891,6 +909,26 @@ export const removeVote = async (studentId: string, projectType: 'midterm' | 'fi
   });
   if (!response.data.success) {
     throw new Error(response.data.message || 'Failed to remove vote');
+  }
+  return response.data;
+};
+
+// Bonus calculation
+export interface BonusCalculationResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    submission_id: number;
+    bonus_awarded: number;
+    vote_count: number;
+    project_type: string;
+  } | null;
+}
+
+export const calculateBonusPoints = async (projectType: 'midterm' | 'final'): Promise<BonusCalculationResponse> => {
+  const response = await api.post<BonusCalculationResponse>(`/api/leaderboard/calculate-bonus/${projectType}`);
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Failed to calculate bonus points');
   }
   return response.data;
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getStudentCheckIns, getAllStudents, getStudentReviews, getSubmissions } from '../lib/api';
-import type { Student, StudentCheckIn, StudentReview, Submission } from '../lib/api';
+import { getStudentCheckIns, getAllStudents, getStudentReviews, getSubmissions, getStudentLeaderboardData } from '../lib/api';
+import type { Student, StudentCheckIn, StudentReview, Submission, LeaderboardEntry } from '../lib/api';
 
 const ProfilePage: React.FC = () => {
   const { studentId } = useParams<{ studentId: string }>();
@@ -10,6 +10,7 @@ const ProfilePage: React.FC = () => {
   const [checkIns, setCheckIns] = useState<StudentCheckIn[]>([]);
   const [reviews, setReviews] = useState<StudentReview[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkInsLoading, setCheckInsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +61,14 @@ const ProfilePage: React.FC = () => {
           setSubmissions([]);
         }
         
+        // Fetch student leaderboard data for points breakdown
+        try {
+          const studentLeaderboardData = await getStudentLeaderboardData(studentId);
+          setLeaderboardData(studentLeaderboardData);
+        } catch {
+          console.log('No leaderboard data found for student, this is normal');
+          setLeaderboardData(null);
+        }
       } catch (err) {
         setError('Failed to fetch student data');
         console.error('Error fetching student data:', err);
@@ -275,173 +284,213 @@ const ProfilePage: React.FC = () => {
               </div>
             </div>
 
-            {/* Marks Card */}
+            {/* Updated Scoring System Information */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Marks</h3>
-              <div className="space-y-4">
-                {/* Check-in Marks */}
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      checkIns.length > 0 ? 'bg-green-100' : 'bg-gray-100'
-                    }`}>
-                      <i className={`fas fa-check text-sm ${
-                        checkIns.length > 0 ? 'text-green-600' : 'text-gray-400'
-                      }`}></i>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">Check-in</p>
-                      <p className="text-xs text-gray-500">
-                        {checkIns.length > 0 ? 'Completed' : 'Not started'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className={`text-lg font-bold ${
-                      checkIns.length > 0 ? 'text-green-600' : 'text-gray-400'
-                    }`}>
-                      {checkIns.length > 0 ? '10' : '0'}/10
-                    </span>
-                  </div>
-                </div>
-
-                {/* App Review Marks */}
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      reviews.length > 0 ? 'bg-green-100' : 'bg-gray-100'
-                    }`}>
-                      <i className={`fas fa-mobile-alt text-sm ${
-                        reviews.length > 0 ? 'text-green-600' : 'text-gray-400'
-                      }`}></i>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">App Review</p>
-                      <p className="text-xs text-gray-500">
-                        {reviews.length > 0 ? `${reviews.length} review${reviews.length > 1 ? 's' : ''} submitted` : 'Not submitted'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className={`text-lg font-bold ${
-                      reviews.length > 0 ? 'text-green-600' : 'text-gray-400'
-                    }`}>
-                      {reviews.length > 0 ? '10' : '0'}/10
-                    </span>
-                  </div>
-                </div>
-
-                {/* Screenshot Submissions Marks */}
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      submissions.filter(s => s.submission_type === 'screenshot').length > 0 ? 'bg-green-100' : 'bg-gray-100'
-                    }`}>
-                      <i className={`fas fa-image text-sm ${
-                        submissions.filter(s => s.submission_type === 'screenshot').length > 0 ? 'text-green-600' : 'text-gray-400'
-                      }`}></i>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">Screenshot Submissions</p>
-                      <p className="text-xs text-gray-500">
-                        {submissions.filter(s => s.submission_type === 'screenshot').length > 0 
-                          ? `${submissions.filter(s => s.submission_type === 'screenshot').length} submitted` 
-                          : 'Not submitted'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className={`text-lg font-bold ${
-                      submissions.filter(s => s.submission_type === 'screenshot').length > 0 ? 'text-green-600' : 'text-gray-400'
-                    }`}>
-                      {submissions.filter(s => s.submission_type === 'screenshot').length > 0 ? '10' : '0'}/10
-                    </span>
-                  </div>
-                </div>
-
-                {/* GitHub Repository Marks */}
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      submissions.filter(s => s.submission_type === 'github_repo').length > 0 ? 'bg-green-100' : 'bg-gray-100'
-                    }`}>
-                      <i className={`fab fa-github text-sm ${
-                        submissions.filter(s => s.submission_type === 'github_repo').length > 0 ? 'text-green-600' : 'text-gray-400'
-                      }`}></i>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">GitHub Repository</p>
-                      <p className="text-xs text-gray-500">
-                        {submissions.filter(s => s.submission_type === 'github_repo').length > 0 
-                          ? `${submissions.filter(s => s.submission_type === 'github_repo').length} submitted` 
-                          : 'Not submitted'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className={`text-lg font-bold ${
-                      submissions.filter(s => s.submission_type === 'github_repo').length > 0 ? 'text-green-600' : 'text-gray-400'
-                    }`}>
-                      {submissions.filter(s => s.submission_type === 'github_repo').length > 0 ? '10' : '0'}/10
-                    </span>
-                  </div>
-                </div>
-
-                {/* GitHub Organization Marks */}
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                      <i className="fas fa-users text-sm text-gray-400"></i>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">GitHub Organization</p>
-                      <p className="text-xs text-gray-500">Not submitted</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-lg font-bold text-gray-400">0/10</span>
-                  </div>
-                </div>
-
-                {/* Total Marks */}
-                <div className="border-t pt-4 mt-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-semibold text-gray-900">Total Marks</span>
-                    <span className="text-2xl font-bold text-blue-600">
-                      {(() => {
-                        let total = 0;
-                        if (checkIns.length > 0) total += 10;
-                        if (reviews.length > 0) total += 10;
-                        if (submissions.length > 0) total += 10;
-                        return total;
-                      })()}/50
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ 
-                        width: `${(() => {
-                          let total = 0;
-                          if (checkIns.length > 0) total += 10;
-                          if (reviews.length > 0) total += 10;
-                          if (submissions.length > 0) total += 10;
-                          return (total / 50) * 100;
-                        })()}%` 
-                      }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {(() => {
-                      let total = 0;
-                      if (checkIns.length > 0) total += 10;
-                      if (reviews.length > 0) total += 10;
-                      if (submissions.length > 0) total += 10;
-                      return (total / 50) * 100;
-                    })()}% Complete
-                  </p>
-                </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 Updated Scoring System</h3>
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg">
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center">
+                    <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                    <span className="text-green-600 font-semibold mr-2">Check-ins & Reviews:</span>
+                    <span className="text-gray-600">10 points each</span>
+                  </li>
+                  <li className="flex items-center">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                    <span className="text-blue-600 font-semibold mr-2">Midterm Projects:</span>
+                    <span className="text-gray-600">20 points each</span>
+                  </li>
+                  <li className="flex items-center">
+                    <span className="w-2 h-2 bg-blue-600 rounded-full mr-3"></span>
+                    <span className="text-blue-600 font-semibold mr-2">Final Projects:</span>
+                    <span className="text-gray-600">50 points each</span>
+                  </li>
+                  <li className="flex items-center">
+                    <span className="w-2 h-2 bg-purple-500 rounded-full mr-3"></span>
+                    <span className="text-purple-600 font-semibold mr-2">Project Notes:</span>
+                    <span className="text-gray-600">5 points per note</span>
+                  </li>
+                  <li className="flex items-center">
+                    <span className="w-2 h-2 bg-orange-500 rounded-full mr-3"></span>
+                    <span className="text-orange-600 font-semibold mr-2">Votes Cast:</span>
+                    <span className="text-gray-600">5 points per vote</span>
+                  </li>
+                  <li className="flex items-center">
+                    <span className="w-2 h-2 bg-indigo-500 rounded-full mr-3"></span>
+                    <span className="text-indigo-600 font-semibold mr-2">Quiz Points:</span>
+                    <span className="text-gray-600">5 points per correct answer</span>
+                  </li>
+                  <li className="flex items-center">
+                    <span className="w-2 h-2 bg-yellow-500 rounded-full mr-3"></span>
+                    <span className="text-yellow-600 font-semibold mr-2">🏆 Vote Winner Bonus:</span>
+                    <span className="text-gray-600">50 points (from Aug 26, 2025)</span>
+                  </li>
+                </ul>
               </div>
+            </div>
+
+            {/* Current Marks Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Points</h3>
+              {leaderboardData && leaderboardData.points_breakdown ? (
+                <div className="space-y-4">
+                  {/* Points Breakdown */}
+                  {leaderboardData.points_breakdown.check_in_points > 0 && (
+                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                          <i className="fas fa-check text-green-600 text-sm"></i>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">Check-ins</p>
+                          <p className="text-xs text-gray-500">Daily engagement</p>
+                        </div>
+                      </div>
+                      <span className="text-lg font-bold text-green-600">
+                        +{leaderboardData.points_breakdown.check_in_points}
+                      </span>
+                    </div>
+                  )}
+
+                  {leaderboardData.points_breakdown.review_points > 0 && (
+                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                          <i className="fas fa-mobile-alt text-green-600 text-sm"></i>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">App Reviews</p>
+                          <p className="text-xs text-gray-500">Mobile app feedback</p>
+                        </div>
+                      </div>
+                      <span className="text-lg font-bold text-green-600">
+                        +{leaderboardData.points_breakdown.review_points}
+                      </span>
+                    </div>
+                  )}
+
+                  {leaderboardData.points_breakdown.midterm_project_points > 0 && (
+                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                          <i className="fas fa-project-diagram text-blue-600 text-sm"></i>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">Midterm Projects</p>
+                          <p className="text-xs text-gray-500">{leaderboardData.points_breakdown.midterm_project_points / 20} submitted</p>
+                        </div>
+                      </div>
+                      <span className="text-lg font-bold text-blue-600">
+                        +{leaderboardData.points_breakdown.midterm_project_points}
+                      </span>
+                    </div>
+                  )}
+
+                  {leaderboardData.points_breakdown.final_project_points > 0 && (
+                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center">
+                          <i className="fas fa-trophy text-blue-700 text-sm"></i>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">Final Projects</p>
+                          <p className="text-xs text-gray-500">{leaderboardData.points_breakdown.final_project_points / 50} submitted</p>
+                        </div>
+                      </div>
+                      <span className="text-lg font-bold text-blue-700">
+                        +{leaderboardData.points_breakdown.final_project_points}
+                      </span>
+                    </div>
+                  )}
+
+                  {leaderboardData.points_breakdown.project_notes_points > 0 && (
+                    <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                          <i className="fas fa-sticky-note text-purple-600 text-sm"></i>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">Project Notes</p>
+                          <p className="text-xs text-gray-500">{leaderboardData.points_breakdown.project_notes_points / 5} notes written</p>
+                        </div>
+                      </div>
+                      <span className="text-lg font-bold text-purple-600">
+                        +{leaderboardData.points_breakdown.project_notes_points}
+                      </span>
+                    </div>
+                  )}
+
+                  {leaderboardData.points_breakdown.voting_points > 0 && (
+                    <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                          <i className="fas fa-vote-yea text-orange-600 text-sm"></i>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">Votes Cast</p>
+                          <p className="text-xs text-gray-500">{leaderboardData.points_breakdown.voting_points / 5} votes submitted</p>
+                        </div>
+                      </div>
+                      <span className="text-lg font-bold text-orange-600">
+                        +{leaderboardData.points_breakdown.voting_points}
+                      </span>
+                    </div>
+                  )}
+
+                  {leaderboardData.points_breakdown.quiz_points > 0 && (
+                    <div className="flex items-center justify-between p-3 bg-indigo-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                          <i className="fas fa-brain text-indigo-600 text-sm"></i>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">Quiz Points</p>
+                          <p className="text-xs text-gray-500">{leaderboardData.points_breakdown.quiz_points / 5} correct answers</p>
+                        </div>
+                      </div>
+                      <span className="text-lg font-bold text-indigo-600">
+                        +{leaderboardData.points_breakdown.quiz_points}
+                      </span>
+                    </div>
+                  )}
+
+                  {leaderboardData.points_breakdown.bonus_points > 0 && (
+                    <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border-2 border-yellow-200">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                          <i className="fas fa-crown text-yellow-600 text-sm"></i>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">🏆 Vote Winner Bonus</p>
+                          <p className="text-xs text-gray-500">Most voted project</p>
+                        </div>
+                      </div>
+                      <span className="text-lg font-bold text-yellow-600">
+                        +{leaderboardData.points_breakdown.bonus_points}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Total Score */}
+                  <div className="border-t pt-4 mt-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-semibold text-gray-900">Total Points</span>
+                      <div className="text-right">
+                        <span className="text-2xl font-bold text-blue-600">
+                          {leaderboardData.total_marks}
+                        </span>
+                        <p className="text-xs text-gray-500">Rank #{leaderboardData.rank}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i className="fas fa-chart-bar text-gray-400 text-2xl"></i>
+                  </div>
+                  <p className="text-gray-500">Loading points breakdown...</p>
+                </div>
+              )}
             </div>
           </div>
 
