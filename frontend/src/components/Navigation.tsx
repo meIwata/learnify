@@ -30,6 +30,10 @@ const Navigation: React.FC = () => {
       // Show Quiz as active when on /quiz or /questions
       return location.pathname === path || location.pathname === '/questions';
     }
+    if (path === '/projects') {
+      // Show Projects as active when on /projects or /projects/:id
+      return location.pathname === path || location.pathname.startsWith('/projects/');
+    }
     return location.pathname === path;
   };
 
@@ -84,14 +88,14 @@ const Navigation: React.FC = () => {
               Reviews
             </Link>
             <Link 
-              to="/submissions" 
+              to="/projects" 
               className={`font-medium pb-1 transition-colors ${
-                isActive('/submissions') 
+                isActive('/projects') 
                   ? 'text-blue-600 border-b-2 border-blue-600' 
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Submissions
+              Projects
             </Link>
             <Link 
               to="/quiz" 

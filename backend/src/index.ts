@@ -15,6 +15,7 @@ import leaderboardRouter from './routes/leaderboard';
 import adminRouter from './routes/admin';
 import lessonsRouter from './routes/lessons';
 import submissionsRouter from './routes/submissions';
+import projectNotesRouter from './routes/projectNotes';
 import quizRouter from './routes/quiz';
 import { config } from './config/supabase';
 
@@ -64,6 +65,7 @@ app.use('/api', leaderboardRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/lessons', lessonsRouter);
 app.use('/api/submissions', submissionsRouter);
+app.use('/api/project-notes', projectNotesRouter);
 app.use('/api/quiz', quizRouter);
 
 // Root endpoint

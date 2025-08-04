@@ -358,12 +358,26 @@ export const reorderLessonPlanItems = async (
   return response.data.data;
 };
 
+// Submission file interface
+export interface SubmissionFile {
+  id: number;
+  submission_id: number;
+  file_path: string;
+  file_name: string;
+  file_size: number;
+  mime_type: string;
+  file_order: number;
+  file_url: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Submissions interfaces
 export interface Submission {
   id: number;
   student_id: string;
   student_name: string;
-  submission_type: 'screenshot' | 'github_repo';
+  submission_type: 'screenshot' | 'github_repo' | 'project';
   title: string;
   description?: string;
   file_path?: string;
@@ -373,6 +387,9 @@ export interface Submission {
   github_url?: string;
   lesson_id?: string;
   file_url?: string;
+  files?: SubmissionFile[];
+  project_type?: 'midterm' | 'final';
+  is_public?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -419,11 +436,59 @@ export const uploadSubmission = async (formData: FormData): Promise<Submission> 
   return response.data.data.submission;
 };
 
+export const getSubmission = async (submissionId: number): Promise<Submission> => {
+  const response = await api.get<{success: boolean, data: {submission: Submission}}>(`/api/submissions/${submissionId}`);
+  if (!response.data.success) {
+    throw new Error('Failed to fetch submission');
+  }
+  return response.data.data.submission;
+};
+
 export const deleteSubmission = async (submissionId: number): Promise<void> => {
   const response = await api.delete(`/api/submissions/${submissionId}`);
   if (response.status !== 200) {
     throw new Error('Failed to delete submission');
   }
+};
+
+// Update project with new screenshots
+export const updateProjectScreenshots = async (submissionId: number, studentId: string, formData: FormData): Promise<Submission> => {
+  // Add student_id to formData
+  formData.append('student_id', studentId);
+  
+  const response = await api.put<SubmissionUploadResponse>(`/api/submissions/${submissionId}/screenshots`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  if (!response.data.success) {
+    throw new Error(response.data.error || 'Failed to add project screenshots');
+  }
+  return response.data.data.submission;
+};
+
+// Delete a specific screenshot from a project
+export const deleteProjectScreenshot = async (submissionId: number, fileId: number, studentId: string): Promise<{remaining_files: number}> => {
+  const response = await api.delete<{success: boolean, data: {remaining_files: number}, message: string}>(`/api/submissions/${submissionId}/files/${fileId}`, {
+    params: { student_id: studentId }
+  });
+  if (!response.data.success) {
+    throw new Error('Failed to delete screenshot');
+  }
+  return response.data.data;
+};
+
+// Get public projects for showcase
+export const getPublicProjects = async (params?: {
+  project_type?: 'midterm' | 'final';
+  limit?: number;
+  offset?: number;
+}): Promise<Submission[]> => {
+  const response = await api.get<SubmissionsResponse>('/api/submissions/projects/public', { params });
+  if (!response.data.success) {
+    throw new Error(response.data.error || 'Failed to fetch public projects');
+  }
+  return response.data.data.submissions;
 };
 
 // Quiz interfaces
@@ -676,6 +741,81 @@ export const getAllQuestionsWithAttempts = async (studentId: string): Promise<Al
     console.error('Error status:', error?.response?.status);
     console.error('Error data:', error?.response?.data);
     throw error;
+  }
+};
+
+// Project Notes interfaces
+export interface ProjectNote {
+  id: number;
+  submission_id: number;
+  student_id: string;
+  student_uuid: string;
+  note_text: string;
+  is_private: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectNotesResponse {
+  success: boolean;
+  data: {
+    notes: ProjectNote[];
+    submission_id: number;
+    student_id: string;
+  };
+}
+
+export interface CreateProjectNoteRequest {
+  submission_id: number;
+  student_id: string;
+  note_text: string;
+  is_private?: boolean;
+}
+
+export interface CreateProjectNoteResponse {
+  success: boolean;
+  data: {
+    note: ProjectNote;
+  };
+  message: string;
+}
+
+// Project Notes API functions
+export const getProjectNotes = async (submissionId: number, studentId: string): Promise<ProjectNote[]> => {
+  const response = await api.get<ProjectNotesResponse>(`/api/project-notes/${submissionId}`, {
+    params: { student_id: studentId }
+  });
+  if (!response.data.success) {
+    throw new Error('Failed to fetch project notes');
+  }
+  return response.data.data.notes;
+};
+
+export const createProjectNote = async (data: CreateProjectNoteRequest): Promise<ProjectNote> => {
+  const response = await api.post<CreateProjectNoteResponse>('/api/project-notes', data);
+  if (!response.data.success) {
+    throw new Error('Failed to create project note');
+  }
+  return response.data.data.note;
+};
+
+export const updateProjectNote = async (noteId: number, studentId: string, noteText: string): Promise<ProjectNote> => {
+  const response = await api.put<CreateProjectNoteResponse>(`/api/project-notes/${noteId}`, 
+    { note_text: noteText },
+    { params: { student_id: studentId } }
+  );
+  if (!response.data.success) {
+    throw new Error('Failed to update project note');
+  }
+  return response.data.data.note;
+};
+
+export const deleteProjectNote = async (noteId: number, studentId: string): Promise<void> => {
+  const response = await api.delete(`/api/project-notes/${noteId}`, {
+    params: { student_id: studentId }
+  });
+  if (!response.data.success) {
+    throw new Error('Failed to delete project note');
   }
 };
 
