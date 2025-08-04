@@ -96,6 +96,10 @@ Core entities include:
 - `submissions` - Screenshots and GitHub links
 - `quizzes/questions/quiz_attempts` - Assessment system
 - `awards` - Recognition and badges
+- `projects` - Information about student projects
+- `project_submissions` - Links projects to students
+- `project_votes` - Tracks student votes on projects
+- `project_notes` - Notes and feedback on projects
 
 ## Development Notes
 

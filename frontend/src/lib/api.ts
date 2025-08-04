@@ -819,4 +819,80 @@ export const deleteProjectNote = async (noteId: number, studentId: string): Prom
   }
 };
 
+// Voting interfaces
+export interface ProjectVoteStatus {
+  project_type: 'midterm' | 'final';
+  can_vote: boolean;
+  voted_for_submission_id?: number;
+}
+
+export interface VotingStatusResponse {
+  success: boolean;
+  voting_status: ProjectVoteStatus[];
+}
+
+export interface ProjectWithVotes {
+  submission_id: number;
+  title: string;
+  description?: string;
+  project_author: string;
+  project_type: 'midterm' | 'final';
+  github_url?: string;
+  file_path?: string;
+  submission_date: string;
+  vote_count: number;
+}
+
+export interface ProjectVotesResponse {
+  success: boolean;
+  projects: ProjectWithVotes[];
+}
+
+export interface VoteRequest {
+  student_id: string;
+  submission_id: number;
+  project_type: 'midterm' | 'final';
+}
+
+export interface VoteResponse {
+  success: boolean;
+  message: string;
+  vote_id?: number;
+}
+
+// Voting API functions
+export const getProjectVotes = async (projectType: 'midterm' | 'final'): Promise<ProjectWithVotes[]> => {
+  const response = await api.get<ProjectVotesResponse>(`/api/voting/projects/${projectType}/votes`);
+  if (!response.data.success) {
+    throw new Error('Failed to fetch project votes');
+  }
+  return response.data.projects;
+};
+
+export const getStudentVotingStatus = async (studentId: string): Promise<ProjectVoteStatus[]> => {
+  const response = await api.get<VotingStatusResponse>(`/api/voting/student/${studentId}/voting-status`);
+  if (!response.data.success) {
+    throw new Error('Failed to fetch voting status');
+  }
+  return response.data.voting_status;
+};
+
+export const castVote = async (data: VoteRequest): Promise<VoteResponse> => {
+  const response = await api.post<VoteResponse>('/api/voting/vote', data);
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Failed to cast vote');
+  }
+  return response.data;
+};
+
+export const removeVote = async (studentId: string, projectType: 'midterm' | 'final'): Promise<VoteResponse> => {
+  const response = await api.delete<VoteResponse>('/api/voting/vote', {
+    data: { student_id: studentId, project_type: projectType }
+  });
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Failed to remove vote');
+  }
+  return response.data;
+};
+
 export default api;

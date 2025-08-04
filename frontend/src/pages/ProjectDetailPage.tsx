@@ -5,6 +5,7 @@ import { getSubmission, getProjectNotes, createProjectNote, updateProjectNote, d
 import type { Submission, ProjectNote } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import ImageGallery from '../components/ImageGallery';
+import ProjectVoteButton from '../components/ProjectVoteButton';
 
 const ProjectDetailPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -263,6 +264,25 @@ const ProjectDetailPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Voting Section */}
+          {project.is_public && project.project_type && (
+            <div className="mb-6 pb-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Community Voting</h3>
+              </div>
+              <ProjectVoteButton 
+                submissionId={project.id}
+                projectType={project.project_type as 'midterm' | 'final'}
+                disabled={project.student_id === studentId}
+              />
+              {project.student_id === studentId && (
+                <p className="text-xs text-gray-500 mt-2">
+                  ℹ️ You cannot vote for your own project
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Description */}
           {project.description && (
             <div className="mb-6">
@@ -331,7 +351,7 @@ const ProjectDetailPage: React.FC = () => {
                   <ImageGallery 
                     files={project.files} 
                     projectTitle={project.title}
-                    canDelete={canUpdateScreenshots}
+                    canDelete={canUpdateScreenshots || false}
                     onDeleteFile={handleDeleteScreenshot}
                   />
                 ) : project.file_url ? (

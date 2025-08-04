@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Github, Calendar, User, BookOpen, GraduationCap, Image as ImageIcon, ExternalLink, X, ZoomIn } from 'lucide-react';
-import { getPublicProjects, type Submission } from '../lib/api';
+import { Github, Calendar, User, BookOpen, GraduationCap, Image as ImageIcon, ExternalLink, X, ZoomIn, Heart } from 'lucide-react';
+import { getPublicProjects, getProjectVotes, type Submission, type ProjectWithVotes } from '../lib/api';
 import ImageGallery from './ImageGallery';
 
 interface ProjectShowcaseProps {
@@ -10,6 +10,8 @@ interface ProjectShowcaseProps {
 
 const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({ filterType = 'all' }) => {
   const [projects, setProjects] = useState<Submission[]>([]);
+  const [midtermVotes, setMidtermVotes] = useState<ProjectWithVotes[]>([]);
+  const [finalVotes, setFinalVotes] = useState<ProjectWithVotes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'midterm' | 'final'>(filterType);
@@ -22,8 +24,16 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({ filterType = 'all' })
     try {
       setLoading(true);
       setError(null);
-      const data = await getPublicProjects();
-      setProjects(data);
+      
+      const [projectsData, midtermVotesData, finalVotesData] = await Promise.all([
+        getPublicProjects(),
+        getProjectVotes('midterm').catch(() => []),
+        getProjectVotes('final').catch(() => [])
+      ]);
+      
+      setProjects(projectsData);
+      setMidtermVotes(midtermVotesData);
+      setFinalVotes(finalVotesData);
     } catch (err) {
       setError('Failed to load projects');
     } finally {
@@ -46,6 +56,12 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({ filterType = 'all' })
     return type === 'midterm' ? 
       'bg-blue-100 text-blue-800' : 
       'bg-purple-100 text-purple-800';
+  };
+
+  const getVoteCount = (projectId: number, projectType: string): number => {
+    const votes = projectType === 'midterm' ? midtermVotes : finalVotes;
+    const project = votes.find(v => v.submission_id === projectId);
+    return project?.vote_count || 0;
   };
 
   const formatDate = (dateString: string) => {
@@ -143,9 +159,15 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({ filterType = 'all' })
                     <h3 className="text-lg font-semibold text-gray-900 truncate">
                       {project.title}
                     </h3>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <User className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-600">{project.student_id}</span>
+                    <div className="flex items-center space-x-4 mt-1">
+                      <div className="flex items-center space-x-2">
+                        <User className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-600">{project.student_id}</span>
+                      </div>
+                      <div className="flex items-center space-x-1 text-red-500">
+                        <Heart className="w-4 h-4" />
+                        <span className="text-sm font-medium">{getVoteCount(project.id, project.project_type || 'midterm')}</span>
+                      </div>
                     </div>
                   </div>
                   <div className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getProjectTypeColor(project.project_type || 'midterm')}`}>
