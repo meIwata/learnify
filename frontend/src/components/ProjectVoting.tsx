@@ -48,43 +48,42 @@ const ProjectVoting: React.FC<ProjectVotingProps> = ({ projectType }) => {
     loadData();
   }, [studentId, projectType]);
 
-  const handleVote = async (submissionId: number) => {
-    if (!studentId || !votingStatus?.can_vote) return;
+  const handleVoteToggle = async (submissionId: number) => {
+    if (!studentId) return;
     
     try {
       setVoting(submissionId);
       setError(null);
       
-      await castVote({
-        student_id: studentId,
-        submission_id: submissionId,
-        project_type: projectType
-      });
+      // If user can vote, cast a vote
+      if (votingStatus?.can_vote) {
+        await castVote({
+          student_id: studentId,
+          submission_id: submissionId,
+          project_type: projectType
+        });
+      } 
+      // If user has already voted for this project, remove the vote
+      else if (votingStatus?.voted_for_submission_id === submissionId) {
+        await removeVote(studentId, projectType);
+      }
+      // If user voted for a different project, remove old vote and cast new one
+      else if (votingStatus?.voted_for_submission_id && votingStatus.voted_for_submission_id !== submissionId) {
+        await removeVote(studentId, projectType);
+        // Wait a moment then cast the new vote
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await castVote({
+          student_id: studentId,
+          submission_id: submissionId,
+          project_type: projectType
+        });
+      }
       
       // Reload data to get updated vote counts and status
       await loadData();
     } catch (err: any) {
-      console.error('Error casting vote:', err);
-      setError(err.message || 'Failed to cast vote');
-    } finally {
-      setVoting(null);
-    }
-  };
-
-  const handleRemoveVote = async () => {
-    if (!studentId || votingStatus?.can_vote) return;
-    
-    try {
-      setVoting(-1); // Special ID for remove vote
-      setError(null);
-      
-      await removeVote(studentId, projectType);
-      
-      // Reload data to get updated vote counts and status
-      await loadData();
-    } catch (err: any) {
-      console.error('Error removing vote:', err);
-      setError(err.message || 'Failed to remove vote');
+      console.error('Error toggling vote:', err);
+      setError(err.message || 'Failed to update vote');
     } finally {
       setVoting(null);
     }
@@ -126,16 +125,7 @@ const ProjectVoting: React.FC<ProjectVotingProps> = ({ projectType }) => {
           {canVote ? (
             <p>✅ You can vote for one {projectType} project</p>
           ) : hasVoted ? (
-            <div className="flex items-center justify-between">
-              <p>🗳️ You have already voted for a {projectType} project</p>
-              <button
-                onClick={handleRemoveVote}
-                disabled={voting === -1}
-                className="ml-2 px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 disabled:opacity-50"
-              >
-                {voting === -1 ? 'Removing...' : 'Change Vote'}
-              </button>
-            </div>
+            <p>🗳️ You have already voted for a {projectType} project. Tap the vote button again to unvote or vote for a different project.</p>
           ) : (
             <p>❌ Voting not available</p>
           )}
@@ -196,20 +186,31 @@ const ProjectVoting: React.FC<ProjectVotingProps> = ({ projectType }) => {
                   )}
                 </div>
 
-                {canVote && (
+                {/* Vote button - always show if user can interact */}
+                {(canVote || hasVoted) && (
                   <button
-                    onClick={() => handleVote(project.submission_id)}
+                    onClick={() => handleVoteToggle(project.submission_id)}
                     disabled={voting === project.submission_id}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className={`px-4 py-2 text-white rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                      hasVoted && votingStatus?.voted_for_submission_id === project.submission_id
+                        ? 'bg-green-600 hover:bg-green-700'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
                   >
-                    {voting === project.submission_id ? 'Voting...' : '🗳️ Vote'}
+                    {voting === project.submission_id ? (
+                      hasVoted && votingStatus?.voted_for_submission_id === project.submission_id
+                        ? 'Removing...'
+                        : hasVoted
+                        ? 'Changing...'
+                        : 'Voting...'
+                    ) : (
+                      hasVoted && votingStatus?.voted_for_submission_id === project.submission_id
+                        ? '✅ Voted'
+                        : hasVoted
+                        ? '🗳️ Vote Here'
+                        : '🗳️ Vote'
+                    )}
                   </button>
-                )}
-
-                {hasVoted && votingStatus?.voted_for_submission_id === project.submission_id && (
-                  <div className="px-3 py-1 bg-green-100 text-green-800 rounded text-sm">
-                    ✅ Your Vote
-                  </div>
                 )}
               </div>
             </div>

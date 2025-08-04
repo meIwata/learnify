@@ -61,43 +61,42 @@ const ProjectVoteButton: React.FC<ProjectVoteButtonProps> = ({
     loadVotingData();
   }, [studentId, projectType, submissionId]);
 
-  const handleVote = async () => {
-    if (!studentId || !votingStatus?.can_vote || voting || disabled) return;
+  const handleVoteToggle = async () => {
+    if (!studentId || voting || disabled) return;
     
     try {
       setVoting(true);
       setError(null);
       
-      await castVote({
-        student_id: studentId,
-        submission_id: submissionId,
-        project_type: projectType
-      });
+      // If user can vote, cast a vote
+      if (votingStatus?.can_vote) {
+        await castVote({
+          student_id: studentId,
+          submission_id: submissionId,
+          project_type: projectType
+        });
+      } 
+      // If user has already voted for this project, remove the vote
+      else if (votingStatus?.voted_for_submission_id === submissionId) {
+        await removeVote(studentId, projectType);
+      }
+      // If user voted for a different project, remove old vote and cast new one
+      else if (votingStatus?.voted_for_submission_id && votingStatus.voted_for_submission_id !== submissionId) {
+        await removeVote(studentId, projectType);
+        // Wait a moment then cast the new vote
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await castVote({
+          student_id: studentId,
+          submission_id: submissionId,
+          project_type: projectType
+        });
+      }
       
       // Reload data to get updated status and vote counts
       await loadVotingData();
     } catch (err: any) {
-      console.error('Error casting vote:', err);
-      setError(err.message || 'Failed to cast vote');
-    } finally {
-      setVoting(false);
-    }
-  };
-
-  const handleRemoveVote = async () => {
-    if (!studentId || votingStatus?.can_vote || voting || disabled) return;
-    
-    try {
-      setVoting(true);
-      setError(null);
-      
-      await removeVote(studentId, projectType);
-      
-      // Reload data to get updated status and vote counts
-      await loadVotingData();
-    } catch (err: any) {
-      console.error('Error removing vote:', err);
-      setError(err.message || 'Failed to remove vote');
+      console.error('Error toggling vote:', err);
+      setError(err.message || 'Failed to update vote');
     } finally {
       setVoting(false);
     }
@@ -135,7 +134,7 @@ const ProjectVoteButton: React.FC<ProjectVoteButtonProps> = ({
       <div className="flex items-center space-x-2">
         {canVote && (
           <button
-            onClick={handleVote}
+            onClick={handleVoteToggle}
             disabled={voting || disabled}
             className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
@@ -154,35 +153,43 @@ const ProjectVoteButton: React.FC<ProjectVoteButtonProps> = ({
         )}
 
         {hasVoted && (
-          <div className="flex items-center space-x-3">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-green-100 text-green-800 rounded-lg">
-              <Heart className="w-4 h-4 fill-current" />
-              <span className="text-sm font-medium">Your Vote</span>
-            </div>
-            <button
-              onClick={handleRemoveVote}
-              disabled={voting || disabled}
-              className="text-sm text-gray-600 hover:text-gray-800 underline disabled:opacity-50"
-            >
-              {voting ? 'Removing...' : 'Change Vote'}
-            </button>
-          </div>
+          <button
+            onClick={handleVoteToggle}
+            disabled={voting || disabled}
+            className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {voting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Removing...</span>
+              </>
+            ) : (
+              <>
+                <Heart className="w-4 h-4 fill-current" />
+                <span>Voted</span>
+              </>
+            )}
+          </button>
         )}
 
         {hasVotedElsewhere && (
-          <div className="flex items-center space-x-3">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-gray-100 text-gray-600 rounded-lg">
-              <HeartOff className="w-4 h-4" />
-              <span className="text-sm">Already voted for another {projectType} project</span>
-            </div>
-            <button
-              onClick={handleRemoveVote}
-              disabled={voting || disabled}
-              className="text-sm text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
-            >
-              {voting ? 'Changing...' : 'Change Vote'}
-            </button>
-          </div>
+          <button
+            onClick={handleVoteToggle}
+            disabled={voting || disabled}
+            className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {voting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Changing...</span>
+              </>
+            ) : (
+              <>
+                <Heart className="w-4 h-4" />
+                <span>Vote Here</span>
+              </>
+            )}
+          </button>
         )}
       </div>
 

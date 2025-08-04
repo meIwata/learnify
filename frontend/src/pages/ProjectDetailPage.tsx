@@ -268,7 +268,7 @@ const ProjectDetailPage: React.FC = () => {
           {project.is_public && project.project_type && (
             <div className="mb-6 pb-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Community Voting</h3>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Class Voting</h3>
               </div>
               <ProjectVoteButton 
                 submissionId={project.id}

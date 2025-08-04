@@ -110,7 +110,7 @@ A database view that provides public voting information without exposing individ
 ### For Students
 1. **Browse Projects**: Navigate to `/projects` page to see all public projects with vote counts
 2. **View Project Details**: Click on any project to view full details
-3. **Vote on Projects**: In the project detail page, find the "Community Voting" section
+3. **Vote on Projects**: In the project detail page, find the "Class Voting" section
 4. **Vote Actions**:
    - Click "Vote" button to cast your vote
    - Click "Change Vote" to remove your current vote and vote for a different project
