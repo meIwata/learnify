@@ -36,7 +36,7 @@ async function getStudentUuid(studentId: string): Promise<string | null> {
     }
 }
 
-// GET /api/project-notes/:submissionId - Get all notes for a submission (filtered by student)
+// GET /api/project-notes/:submissionId - Get the single note for a submission by a student
 router.get('/:submissionId', async (req: Request, res: Response) => {
     try {
         const submissionId = parseInt(req.params.submissionId);
@@ -49,19 +49,19 @@ router.get('/:submissionId', async (req: Request, res: Response) => {
             });
         }
 
-        // Get only the notes created by this student
-        const { data: notes, error } = await supabase
+        // Get the single note created by this student for this submission
+        const { data: note, error } = await supabase
             .from('project_notes')
             .select('*')
             .eq('submission_id', submissionId)
             .eq('student_id', studentId)
-            .order('created_at', { ascending: false });
+            .single();
 
-        if (error) {
-            console.error('Get notes error:', error);
+        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+            console.error('Get note error:', error);
             return res.status(500).json({
                 success: false,
-                error: 'Failed to fetch notes',
+                error: 'Failed to fetch note',
                 message: error.message
             });
         }
@@ -69,14 +69,15 @@ router.get('/:submissionId', async (req: Request, res: Response) => {
         res.json({
             success: true,
             data: {
-                notes: notes || [],
+                note: note || null,
                 submission_id: submissionId,
-                student_id: studentId
+                student_id: studentId,
+                has_note: !!note
             }
         });
 
     } catch (error) {
-        console.error('Get notes error:', error);
+        console.error('Get note error:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error',
@@ -85,7 +86,7 @@ router.get('/:submissionId', async (req: Request, res: Response) => {
     }
 });
 
-// POST /api/project-notes - Create a new note
+// POST /api/project-notes - Create or update a student's note for a project (upsert)
 router.post('/', async (req: Request, res: Response) => {
     try {
         const validation = createNoteSchema.safeParse(req.body);
@@ -109,38 +110,78 @@ router.post('/', async (req: Request, res: Response) => {
             });
         }
 
-        // Create the note
-        const { data: note, error } = await supabase
+        // Check if note already exists
+        const { data: existingNote } = await supabase
             .from('project_notes')
-            .insert({
-                submission_id,
-                student_id,
-                student_uuid: studentUuid,
-                note_text,
-                is_private
-            })
-            .select()
+            .select('id')
+            .eq('submission_id', submission_id)
+            .eq('student_id', student_id)
             .single();
 
-        if (error) {
-            console.error('Create note error:', error);
-            return res.status(500).json({
-                success: false,
-                error: 'Failed to create note',
-                message: error.message
-            });
+        let note;
+        let operation;
+
+        if (existingNote) {
+            // Update existing note
+            const { data: updatedNote, error } = await supabase
+                .from('project_notes')
+                .update({ 
+                    note_text,
+                    is_private,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', existingNote.id)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('Update note error:', error);
+                return res.status(500).json({
+                    success: false,
+                    error: 'Failed to update note',
+                    message: error.message
+                });
+            }
+
+            note = updatedNote;
+            operation = 'updated';
+        } else {
+            // Create new note
+            const { data: newNote, error } = await supabase
+                .from('project_notes')
+                .insert({
+                    submission_id,
+                    student_id,
+                    student_uuid: studentUuid,
+                    note_text,
+                    is_private
+                })
+                .select()
+                .single();
+
+            if (error) {
+                console.error('Create note error:', error);
+                return res.status(500).json({
+                    success: false,
+                    error: 'Failed to create note',
+                    message: error.message
+                });
+            }
+
+            note = newNote;
+            operation = 'created';
         }
 
-        res.status(201).json({
+        res.status(operation === 'created' ? 201 : 200).json({
             success: true,
             data: {
                 note
             },
-            message: 'Note created successfully'
+            message: `Note ${operation} successfully`
         });
 
     } catch (error) {
-        console.error('Create note error:', error);
+        console.error('Upsert note error:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error',

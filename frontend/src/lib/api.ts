@@ -777,9 +777,10 @@ export interface ProjectNote {
 export interface ProjectNotesResponse {
   success: boolean;
   data: {
-    notes: ProjectNote[];
+    note: ProjectNote | null;
     submission_id: number;
     student_id: string;
+    has_note: boolean;
   };
 }
 
@@ -799,20 +800,23 @@ export interface CreateProjectNoteResponse {
 }
 
 // Project Notes API functions
-export const getProjectNotes = async (submissionId: number, studentId: string): Promise<ProjectNote[]> => {
+export const getProjectNote = async (submissionId: number, studentId: string): Promise<{ note: ProjectNote | null; hasNote: boolean }> => {
   const response = await api.get<ProjectNotesResponse>(`/api/project-notes/${submissionId}`, {
     params: { student_id: studentId }
   });
   if (!response.data.success) {
-    throw new Error('Failed to fetch project notes');
+    throw new Error('Failed to fetch project note');
   }
-  return response.data.data.notes;
+  return {
+    note: response.data.data.note,
+    hasNote: response.data.data.has_note
+  };
 };
 
-export const createProjectNote = async (data: CreateProjectNoteRequest): Promise<ProjectNote> => {
+export const createOrUpdateProjectNote = async (data: CreateProjectNoteRequest): Promise<ProjectNote> => {
   const response = await api.post<CreateProjectNoteResponse>('/api/project-notes', data);
   if (!response.data.success) {
-    throw new Error('Failed to create project note');
+    throw new Error('Failed to save project note');
   }
   return response.data.data.note;
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Github, Calendar, User, BookOpen, GraduationCap, ExternalLink, Image as ImageIcon, StickyNote, Edit2, Trash2, Save, Plus, Loader, X, ZoomIn } from 'lucide-react';
-import { getSubmission, getProjectNotes, createProjectNote, updateProjectNote, deleteProjectNote, updateProjectScreenshots, deleteProjectScreenshot } from '../lib/api';
+import { getSubmission, getProjectNote, createOrUpdateProjectNote, updateProjectNote, deleteProjectNote, updateProjectScreenshots, deleteProjectScreenshot } from '../lib/api';
 import type { Submission, ProjectNote } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import ImageGallery from '../components/ImageGallery';
@@ -13,11 +13,10 @@ const ProjectDetailPage: React.FC = () => {
   const { studentId } = useAuth();
   
   const [project, setProject] = useState<Submission | null>(null);
-  const [notes, setNotes] = useState<ProjectNote[]>([]);
-  const [newNoteText, setNewNoteText] = useState('');
-  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
-  const [editingNoteText, setEditingNoteText] = useState('');
-  const [isAddingNote, setIsAddingNote] = useState(false);
+  const [note, setNote] = useState<ProjectNote | null>(null);
+  const [noteText, setNoteText] = useState('');
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [hasNote, setHasNote] = useState(false);
   const [isUpdatingScreenshots, setIsUpdatingScreenshots] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +32,7 @@ const ProjectDetailPage: React.FC = () => {
 
   useEffect(() => {
     if (project && studentId) {
-      fetchNotes();
+      fetchNote();
     }
   }, [project, studentId]);
 
@@ -60,62 +59,71 @@ const ProjectDetailPage: React.FC = () => {
     }
   };
 
-  const fetchNotes = async () => {
+  const fetchNote = async () => {
     if (!project || !studentId) return;
     
     try {
       setNotesLoading(true);
-      const fetchedNotes = await getProjectNotes(project.id, studentId);
-      setNotes(fetchedNotes);
+      const { note: fetchedNote, hasNote } = await getProjectNote(project.id, studentId);
+      setNote(fetchedNote);
+      setHasNote(hasNote);
+      if (fetchedNote) {
+        setNoteText(fetchedNote.note_text);
+      }
     } catch (err) {
-      console.error('Failed to fetch notes:', err);
+      console.error('Failed to fetch note:', err);
     } finally {
       setNotesLoading(false);
     }
   };
 
-  const handleAddNote = async () => {
-    if (!newNoteText.trim() || !studentId || !project) return;
+  const handleSaveNote = async () => {
+    if (!noteText.trim() || !studentId || !project) return;
 
     try {
       setError(null);
-      const newNote = await createProjectNote({
+      const savedNote = await createOrUpdateProjectNote({
         submission_id: project.id,
         student_id: studentId,
-        note_text: newNoteText.trim(),
+        note_text: noteText.trim(),
         is_private: true
       });
-      setNotes([newNote, ...notes]);
-      setNewNoteText('');
-      setIsAddingNote(false);
+      setNote(savedNote);
+      setHasNote(true);
+      setIsEditingNote(false);
     } catch (err) {
-      setError('Failed to add note');
+      setError('Failed to save note');
     }
   };
 
-  const handleUpdateNote = async (noteId: number) => {
-    if (!editingNoteText.trim() || !studentId) return;
+  const handleDeleteNote = async () => {
+    if (!note || !studentId || !confirm('Are you sure you want to delete this note?')) return;
 
     try {
       setError(null);
-      const updatedNote = await updateProjectNote(noteId, studentId, editingNoteText.trim());
-      setNotes(notes.map(note => note.id === noteId ? updatedNote : note));
-      setEditingNoteId(null);
-      setEditingNoteText('');
-    } catch (err) {
-      setError('Failed to update note');
-    }
-  };
-
-  const handleDeleteNote = async (noteId: number) => {
-    if (!studentId || !confirm('Are you sure you want to delete this note?')) return;
-
-    try {
-      setError(null);
-      await deleteProjectNote(noteId, studentId);
-      setNotes(notes.filter(note => note.id !== noteId));
+      await deleteProjectNote(note.id, studentId);
+      setNote(null);
+      setHasNote(false);
+      setNoteText('');
+      setIsEditingNote(false);
     } catch (err) {
       setError('Failed to delete note');
+    }
+  };
+
+  const handleStartEditing = () => {
+    setIsEditingNote(true);
+    if (note) {
+      setNoteText(note.note_text);
+    }
+  };
+
+  const handleCancelEditing = () => {
+    setIsEditingNote(false);
+    if (note) {
+      setNoteText(note.note_text);
+    } else {
+      setNoteText('');
     }
   };
 
@@ -443,21 +451,10 @@ const ProjectDetailPage: React.FC = () => {
 
         {/* Private Notes Section */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-3">
-              <StickyNote className="w-6 h-6 text-yellow-500" />
-              <h2 className="text-xl font-semibold text-gray-900">My Private Notes</h2>
-              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">Only visible to you</span>
-            </div>
-            {!isAddingNote && (
-              <button
-                onClick={() => setIsAddingNote(true)}
-                className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Note</span>
-              </button>
-            )}
+          <div className="flex items-center space-x-3 mb-6">
+            <StickyNote className="w-6 h-6 text-yellow-500" />
+            <h2 className="text-xl font-semibold text-gray-900">My Private Note</h2>
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">Only visible to you</span>
           </div>
 
           {error && (
@@ -466,12 +463,17 @@ const ProjectDetailPage: React.FC = () => {
             </div>
           )}
 
-          {/* Add Note Form */}
-          {isAddingNote && (
+          {/* Note Content */}
+          {notesLoading ? (
+            <div className="text-center py-8">
+              <Loader className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
+            </div>
+          ) : isEditingNote ? (
+            /* Edit Note Form */
             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
               <textarea
-                value={newNoteText}
-                onChange={(e) => setNewNoteText(e.target.value)}
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
                 placeholder="Write your private note here..."
                 className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 rows={4}
@@ -479,100 +481,61 @@ const ProjectDetailPage: React.FC = () => {
               />
               <div className="mt-3 flex justify-end space-x-3">
                 <button
-                  onClick={() => {
-                    setIsAddingNote(false);
-                    setNewNoteText('');
-                  }}
+                  onClick={handleCancelEditing}
                   className="px-4 py-2 text-gray-600 hover:text-gray-800"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleAddNote}
-                  disabled={!newNoteText.trim()}
+                  onClick={handleSaveNote}
+                  disabled={!noteText.trim()}
                   className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300"
                 >
                   <Save className="w-4 h-4" />
-                  <span>Save Note</span>
+                  <span>{hasNote ? 'Update Note' : 'Save Note'}</span>
                 </button>
               </div>
             </div>
-          )}
-
-          {/* Notes List */}
-          {notesLoading ? (
-            <div className="text-center py-8">
-              <Loader className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
-            </div>
-          ) : notes.length === 0 && !isAddingNote ? (
-            <div className="text-center py-12 text-gray-500">
-              <StickyNote className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg font-medium mb-2">No notes yet</p>
-              <p className="text-sm">Add a note to remember important details about this project.</p>
+          ) : hasNote && note ? (
+            /* Display Existing Note */
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-start justify-between">
+                <p className="text-gray-700 whitespace-pre-wrap flex-1">{note.note_text}</p>
+                <div className="flex items-center space-x-2 ml-4">
+                  <button
+                    onClick={handleStartEditing}
+                    className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-yellow-100 rounded"
+                    title="Edit note"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleDeleteNote}
+                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                    title="Delete note"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="mt-2 text-xs text-gray-500">
+                {formatDate(note.created_at)}
+                {note.updated_at !== note.created_at && ' (edited)'}
+              </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              {notes.map((note) => (
-                <div key={note.id} className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  {editingNoteId === note.id ? (
-                    <div>
-                      <textarea
-                        value={editingNoteText}
-                        onChange={(e) => setEditingNoteText(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        rows={4}
-                        autoFocus
-                      />
-                      <div className="mt-3 flex justify-end space-x-2">
-                        <button
-                          onClick={() => {
-                            setEditingNoteId(null);
-                            setEditingNoteText('');
-                          }}
-                          className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={() => handleUpdateNote(note.id)}
-                          disabled={!editingNoteText.trim()}
-                          className="inline-flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:bg-gray-300"
-                        >
-                          <Save className="w-4 h-4" />
-                          <span>Save</span>
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="flex items-start justify-between">
-                        <p className="text-gray-700 whitespace-pre-wrap flex-1">{note.note_text}</p>
-                        <div className="flex items-center space-x-2 ml-4">
-                          <button
-                            onClick={() => {
-                              setEditingNoteId(note.id);
-                              setEditingNoteText(note.note_text);
-                            }}
-                            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-yellow-100 rounded"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteNote(note.id)}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="mt-2 text-xs text-gray-500">
-                        {formatDate(note.created_at)}
-                        {note.updated_at !== note.created_at && ' (edited)'}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+            /* No Note State */
+            <div className="text-center py-12 text-gray-500">
+              <StickyNote className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+              <p className="text-lg font-medium mb-2">No note yet</p>
+              <p className="text-sm mb-4">Add a note to remember important details about this project.</p>
+              <button
+                onClick={handleStartEditing}
+                className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Note</span>
+              </button>
             </div>
           )}
         </div>

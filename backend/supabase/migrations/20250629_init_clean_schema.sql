@@ -26,3 +26,8 @@ CREATE INDEX idx_student_check_ins_student_id ON student_check_ins(student_id, c
 CREATE INDEX idx_student_check_ins_uuid ON student_check_ins(student_uuid, created_at DESC);
 
 -- No RLS needed - using service role for all operations
+
+-- Insert seed data for testing
+INSERT INTO students (student_id, full_name) 
+VALUES ('STU', 'Test Student') 
+ON CONFLICT (student_id) DO NOTHING;

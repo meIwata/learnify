@@ -9,7 +9,10 @@ CREATE TABLE project_notes (
     note_text text NOT NULL,
     is_private boolean DEFAULT true NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    
+    -- Ensure each student can only have one note per project submission
+    CONSTRAINT unique_student_submission_note UNIQUE (student_id, submission_id)
 );
 
 -- Indexes for performance
