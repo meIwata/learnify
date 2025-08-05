@@ -45,7 +45,8 @@ router.get('/', async (req: Request, res: Response) => {
     let query = supabase
       .from('lessons')
       .select('*')
-      .order('scheduled_date', { ascending: true });
+      .order('scheduled_date', { ascending: true })
+      .order('name', { ascending: true });
     
     // Filter by status if provided
     if (status && typeof status === 'string') {
@@ -122,6 +123,7 @@ router.get('/current', async (req: Request, res: Response) => {
       .gte('scheduled_date', today)
       .neq('status', 'skipped')
       .order('scheduled_date', { ascending: true })
+      .order('name', { ascending: true })
       .limit(1);
     
     if (lessonsError) {
@@ -140,6 +142,7 @@ router.get('/current', async (req: Request, res: Response) => {
         .select('*')
         .neq('status', 'skipped')
         .order('scheduled_date', { ascending: false })
+        .order('name', { ascending: true })
         .limit(1);
       
       if (lastError) {

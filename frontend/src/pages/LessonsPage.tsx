@@ -105,6 +105,32 @@ const LessonsPage: React.FC = () => {
       default:
         return true;
     }
+  }).sort((a, b) => {
+    // Primary sort by date
+    const dateA = new Date(a.scheduled_date);
+    const dateB = new Date(b.scheduled_date);
+    const dateComparison = dateA.getTime() - dateB.getTime();
+    
+    if (dateComparison !== 0) {
+      return dateComparison;
+    }
+    
+    // Secondary sort by title with natural numeric sorting
+    // Extract lesson numbers for proper numeric comparison
+    const extractLessonNumber = (name: string) => {
+      const match = name.match(/Lesson (\d+)/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+    
+    const numberA = extractLessonNumber(a.name);
+    const numberB = extractLessonNumber(b.name);
+    
+    if (numberA !== numberB) {
+      return numberA - numberB;
+    }
+    
+    // Fallback to alphabetical sorting if no lesson numbers found
+    return a.name.localeCompare(b.name);
   });
 
   const getLessonStatus = (lesson: Lesson) => {
