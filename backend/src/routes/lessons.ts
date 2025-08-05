@@ -142,7 +142,7 @@ router.get('/current', async (req: Request, res: Response) => {
         .select('*')
         .neq('status', 'skipped')
         .order('scheduled_date', { ascending: false })
-        .order('name', { ascending: false })
+        .order('name', { ascending: true })
         .limit(1);
       
       if (lastError) {
