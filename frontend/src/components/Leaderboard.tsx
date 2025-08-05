@@ -73,6 +73,7 @@ const Leaderboard: React.FC = () => {
     return gradients[index % gradients.length];
   };
 
+
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
@@ -135,6 +136,50 @@ const Leaderboard: React.FC = () => {
               {loading ? '🔄' : '↻'} Refresh
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Scoring Information */}
+      <div className="p-6 bg-gradient-to-r from-green-50 to-blue-50 border-b border-gray-100">
+        <h4 className="text-base font-semibold text-gray-900 mb-4">📊 Updated Scoring System</h4>
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <ul className="space-y-2 text-sm">
+            <li className="flex items-center">
+              <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+              <span className="text-green-600 font-semibold mr-2">Check-ins & Reviews:</span>
+              <span className="text-gray-600">10 points each</span>
+            </li>
+            <li className="flex items-center">
+              <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+              <span className="text-blue-600 font-semibold mr-2">Midterm Projects:</span>
+              <span className="text-gray-600">20 points each</span>
+            </li>
+            <li className="flex items-center">
+              <span className="w-2 h-2 bg-blue-600 rounded-full mr-3"></span>
+              <span className="text-blue-600 font-semibold mr-2">Final Projects:</span>
+              <span className="text-gray-600">50 points each</span>
+            </li>
+            <li className="flex items-center">
+              <span className="w-2 h-2 bg-purple-500 rounded-full mr-3"></span>
+              <span className="text-purple-600 font-semibold mr-2">Project Notes:</span>
+              <span className="text-gray-600">5 points per note</span>
+            </li>
+            <li className="flex items-center">
+              <span className="w-2 h-2 bg-orange-500 rounded-full mr-3"></span>
+              <span className="text-orange-600 font-semibold mr-2">Votes Cast:</span>
+              <span className="text-gray-600">5 points per vote</span>
+            </li>
+            <li className="flex items-center">
+              <span className="w-2 h-2 bg-indigo-500 rounded-full mr-3"></span>
+              <span className="text-indigo-600 font-semibold mr-2">Quiz Points:</span>
+              <span className="text-gray-600">5 points per correct answer</span>
+            </li>
+            <li className="flex items-center">
+              <span className="w-2 h-2 bg-yellow-500 rounded-full mr-3"></span>
+              <span className="text-yellow-600 font-semibold mr-2">🏆 Vote Winner Bonus:</span>
+              <span className="text-gray-600">50 points (from Aug 26, 2025)</span>
+            </li>
+          </ul>
         </div>
       </div>
 
@@ -220,6 +265,63 @@ const Leaderboard: React.FC = () => {
               <div className="text-right">
                 <div className="text-xl font-bold text-blue-600">{entry.total_marks}</div>
                 <div className="text-xs text-gray-500">points</div>
+                {entry.points_breakdown && (
+                  <details className="mt-2 text-xs">
+                    <summary className="cursor-pointer text-gray-400 hover:text-gray-600">
+                      Breakdown
+                    </summary>
+                    <div className="mt-1 space-y-1 bg-white p-2 rounded border shadow-sm">
+                      {entry.points_breakdown.check_in_points > 0 && (
+                        <div className="flex justify-between">
+                          <span>Check-ins:</span>
+                          <span className="text-green-600">+{entry.points_breakdown.check_in_points}</span>
+                        </div>
+                      )}
+                      {entry.points_breakdown.review_points > 0 && (
+                        <div className="flex justify-between">
+                          <span>Reviews:</span>
+                          <span className="text-green-600">+{entry.points_breakdown.review_points}</span>
+                        </div>
+                      )}
+                      {entry.points_breakdown.midterm_project_points > 0 && (
+                        <div className="flex justify-between">
+                          <span>Midterm Projects:</span>
+                          <span className="text-blue-600">+{entry.points_breakdown.midterm_project_points}</span>
+                        </div>
+                      )}
+                      {entry.points_breakdown.final_project_points > 0 && (
+                        <div className="flex justify-between">
+                          <span>Final Projects:</span>
+                          <span className="text-blue-600">+{entry.points_breakdown.final_project_points}</span>
+                        </div>
+                      )}
+                      {entry.points_breakdown.project_notes_points > 0 && (
+                        <div className="flex justify-between">
+                          <span>Project Notes:</span>
+                          <span className="text-purple-600">+{entry.points_breakdown.project_notes_points}</span>
+                        </div>
+                      )}
+                      {entry.points_breakdown.voting_points > 0 && (
+                        <div className="flex justify-between">
+                          <span>Votes Cast:</span>
+                          <span className="text-orange-600">+{entry.points_breakdown.voting_points}</span>
+                        </div>
+                      )}
+                      {entry.points_breakdown.quiz_points > 0 && (
+                        <div className="flex justify-between">
+                          <span>Quiz Points:</span>
+                          <span className="text-indigo-600">+{entry.points_breakdown.quiz_points}</span>
+                        </div>
+                      )}
+                      {entry.points_breakdown.bonus_points > 0 && (
+                        <div className="flex justify-between">
+                          <span>🏆 Vote Winner Bonus:</span>
+                          <span className="text-yellow-600 font-bold">+{entry.points_breakdown.bonus_points}</span>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                )}
               </div>
             </div>
           ))}

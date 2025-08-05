@@ -96,6 +96,10 @@ Core entities include:
 - `submissions` - Screenshots and GitHub links
 - `quizzes/questions/quiz_attempts` - Assessment system
 - `awards` - Recognition and badges
+- `projects` - Information about student projects
+- `project_submissions` - Links projects to students
+- `project_votes` - Tracks student votes on projects
+- `project_notes` - Notes and feedback on projects
 
 ## Development Notes
 
@@ -135,3 +139,8 @@ Core entities include:
 - **Instructor**: Can view analytics, create quizzes, award badges
 
 Refer to PRD.md for detailed feature specifications and user stories.
+
+## Supabase Development Memories
+
+- Prevent running `supabase reset`, try to run migration up instead
+- Find and remember the project ref to connect to local Supabase

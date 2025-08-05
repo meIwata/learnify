@@ -10,6 +10,8 @@ import ProfilePage from './components/ProfilePage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import LessonsPage from './pages/LessonsPage';
 import SubmissionsPage from './pages/SubmissionsPage';
+import ProjectsPage from './pages/ProjectsPage';
+import ProjectDetailPage from './pages/ProjectDetailPage';
 import QuizPage from './pages/QuizPage';
 import QuestionOverviewPage from './pages/QuestionOverviewPage';
 
@@ -30,6 +32,8 @@ function AppRoutes() {
           <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/lessons" element={<LessonsPage />} />
           <Route path="/submissions" element={<SubmissionsPage />} />
+          <Route path="/projects" element={<ProjectsPage />} />
+          <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
           <Route path="/quiz" element={<QuizPage />} />
           <Route path="/questions" element={<QuestionOverviewPage />} />
           <Route path="/profile/:studentId" element={<ProfilePage />} />

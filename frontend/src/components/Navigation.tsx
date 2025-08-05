@@ -30,6 +30,10 @@ const Navigation: React.FC = () => {
       // Show Quiz as active when on /quiz or /questions
       return location.pathname === path || location.pathname === '/questions';
     }
+    if (path === '/projects') {
+      // Show Projects as active when on /projects or /projects/:id
+      return location.pathname === path || location.pathname.startsWith('/projects/');
+    }
     return location.pathname === path;
   };
 
@@ -84,14 +88,14 @@ const Navigation: React.FC = () => {
               Reviews
             </Link>
             <Link 
-              to="/submissions" 
+              to="/projects" 
               className={`font-medium pb-1 transition-colors ${
-                isActive('/submissions') 
+                isActive('/projects') 
                   ? 'text-blue-600 border-b-2 border-blue-600' 
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Submissions
+              Projects
             </Link>
             <Link 
               to="/quiz" 
@@ -116,13 +120,7 @@ const Navigation: React.FC = () => {
           </div>
 
           {/* User Profile & Actions */}
-          <div className="flex items-center space-x-4">
-            {/* Notifications */}
-            <button className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors">
-              <i className="fas fa-bell text-lg"></i>
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
-            </button>
-            
+          <div className="flex items-center">
             {/* User Profile Dropdown */}
             <div className="relative">
               <button 

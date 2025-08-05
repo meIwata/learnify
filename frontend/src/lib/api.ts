@@ -46,6 +46,16 @@ export interface LeaderboardEntry {
   total_check_ins: number;
   latest_check_in: string | null;
   rank: number;
+  points_breakdown?: {
+    check_in_points: number;
+    review_points: number;
+    midterm_project_points: number;
+    final_project_points: number;
+    project_notes_points: number;
+    voting_points: number;
+    quiz_points: number;
+    bonus_points: number;
+  };
 }
 
 // API functions
@@ -152,6 +162,14 @@ export const getLeaderboard = async (limit: number = 50, offset: number = 0): Pr
     throw new Error('Failed to fetch leaderboard');
   }
   return response.data.data.leaderboard;
+};
+
+export const getStudentLeaderboardData = async (studentId: string): Promise<LeaderboardEntry> => {
+  const response = await api.get<{success: boolean, data: {student: LeaderboardEntry}}>(`/api/leaderboard/student/${studentId}`);
+  if (!response.data.success || !response.data.data.student) {
+    throw new Error('Failed to fetch student leaderboard data');
+  }
+  return response.data.data.student;
 };
 
 // Admin API functions
@@ -358,12 +376,26 @@ export const reorderLessonPlanItems = async (
   return response.data.data;
 };
 
+// Submission file interface
+export interface SubmissionFile {
+  id: number;
+  submission_id: number;
+  file_path: string;
+  file_name: string;
+  file_size: number;
+  mime_type: string;
+  file_order: number;
+  file_url: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Submissions interfaces
 export interface Submission {
   id: number;
   student_id: string;
   student_name: string;
-  submission_type: 'screenshot' | 'github_repo';
+  submission_type: 'screenshot' | 'github_repo' | 'project';
   title: string;
   description?: string;
   file_path?: string;
@@ -373,6 +405,9 @@ export interface Submission {
   github_url?: string;
   lesson_id?: string;
   file_url?: string;
+  files?: SubmissionFile[];
+  project_type?: 'midterm' | 'final';
+  is_public?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -419,11 +454,59 @@ export const uploadSubmission = async (formData: FormData): Promise<Submission> 
   return response.data.data.submission;
 };
 
+export const getSubmission = async (submissionId: number): Promise<Submission> => {
+  const response = await api.get<{success: boolean, data: {submission: Submission}}>(`/api/submissions/${submissionId}`);
+  if (!response.data.success) {
+    throw new Error('Failed to fetch submission');
+  }
+  return response.data.data.submission;
+};
+
 export const deleteSubmission = async (submissionId: number): Promise<void> => {
   const response = await api.delete(`/api/submissions/${submissionId}`);
   if (response.status !== 200) {
     throw new Error('Failed to delete submission');
   }
+};
+
+// Update project with new screenshots
+export const updateProjectScreenshots = async (submissionId: number, studentId: string, formData: FormData): Promise<Submission> => {
+  // Add student_id to formData
+  formData.append('student_id', studentId);
+  
+  const response = await api.put<SubmissionUploadResponse>(`/api/submissions/${submissionId}/screenshots`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  if (!response.data.success) {
+    throw new Error(response.data.error || 'Failed to add project screenshots');
+  }
+  return response.data.data.submission;
+};
+
+// Delete a specific screenshot from a project
+export const deleteProjectScreenshot = async (submissionId: number, fileId: number, studentId: string): Promise<{remaining_files: number}> => {
+  const response = await api.delete<{success: boolean, data: {remaining_files: number}, message: string}>(`/api/submissions/${submissionId}/files/${fileId}`, {
+    params: { student_id: studentId }
+  });
+  if (!response.data.success) {
+    throw new Error('Failed to delete screenshot');
+  }
+  return response.data.data;
+};
+
+// Get public projects for showcase
+export const getPublicProjects = async (params?: {
+  project_type?: 'midterm' | 'final';
+  limit?: number;
+  offset?: number;
+}): Promise<Submission[]> => {
+  const response = await api.get<SubmissionsResponse>('/api/submissions/projects/public', { params });
+  if (!response.data.success) {
+    throw new Error(response.data.error || 'Failed to fetch public projects');
+  }
+  return response.data.data.submissions;
 };
 
 // Quiz interfaces
@@ -677,6 +760,181 @@ export const getAllQuestionsWithAttempts = async (studentId: string): Promise<Al
     console.error('Error data:', error?.response?.data);
     throw error;
   }
+};
+
+// Project Notes interfaces
+export interface ProjectNote {
+  id: number;
+  submission_id: number;
+  student_id: string;
+  student_uuid: string;
+  note_text: string;
+  is_private: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectNotesResponse {
+  success: boolean;
+  data: {
+    note: ProjectNote | null;
+    submission_id: number;
+    student_id: string;
+    has_note: boolean;
+  };
+}
+
+export interface CreateProjectNoteRequest {
+  submission_id: number;
+  student_id: string;
+  note_text: string;
+  is_private?: boolean;
+}
+
+export interface CreateProjectNoteResponse {
+  success: boolean;
+  data: {
+    note: ProjectNote;
+  };
+  message: string;
+}
+
+// Project Notes API functions
+export const getProjectNote = async (submissionId: number, studentId: string): Promise<{ note: ProjectNote | null; hasNote: boolean }> => {
+  const response = await api.get<ProjectNotesResponse>(`/api/project-notes/${submissionId}`, {
+    params: { student_id: studentId }
+  });
+  if (!response.data.success) {
+    throw new Error('Failed to fetch project note');
+  }
+  return {
+    note: response.data.data.note,
+    hasNote: response.data.data.has_note
+  };
+};
+
+export const createOrUpdateProjectNote = async (data: CreateProjectNoteRequest): Promise<ProjectNote> => {
+  const response = await api.post<CreateProjectNoteResponse>('/api/project-notes', data);
+  if (!response.data.success) {
+    throw new Error('Failed to save project note');
+  }
+  return response.data.data.note;
+};
+
+export const updateProjectNote = async (noteId: number, studentId: string, noteText: string): Promise<ProjectNote> => {
+  const response = await api.put<CreateProjectNoteResponse>(`/api/project-notes/${noteId}`, 
+    { note_text: noteText },
+    { params: { student_id: studentId } }
+  );
+  if (!response.data.success) {
+    throw new Error('Failed to update project note');
+  }
+  return response.data.data.note;
+};
+
+export const deleteProjectNote = async (noteId: number, studentId: string): Promise<void> => {
+  const response = await api.delete(`/api/project-notes/${noteId}`, {
+    params: { student_id: studentId }
+  });
+  if (!response.data.success) {
+    throw new Error('Failed to delete project note');
+  }
+};
+
+// Voting interfaces
+export interface ProjectVoteStatus {
+  project_type: 'midterm' | 'final';
+  can_vote: boolean;
+  voted_for_submission_id?: number;
+}
+
+export interface VotingStatusResponse {
+  success: boolean;
+  voting_status: ProjectVoteStatus[];
+}
+
+export interface ProjectWithVotes {
+  submission_id: number;
+  title: string;
+  description?: string;
+  project_author: string;
+  project_type: 'midterm' | 'final';
+  github_url?: string;
+  file_path?: string;
+  submission_date: string;
+  vote_count: number;
+}
+
+export interface ProjectVotesResponse {
+  success: boolean;
+  projects: ProjectWithVotes[];
+}
+
+export interface VoteRequest {
+  student_id: string;
+  submission_id: number;
+  project_type: 'midterm' | 'final';
+}
+
+export interface VoteResponse {
+  success: boolean;
+  message: string;
+  vote_id?: number;
+}
+
+// Voting API functions
+export const getProjectVotes = async (projectType: 'midterm' | 'final'): Promise<ProjectWithVotes[]> => {
+  const response = await api.get<ProjectVotesResponse>(`/api/voting/projects/${projectType}/votes`);
+  if (!response.data.success) {
+    throw new Error('Failed to fetch project votes');
+  }
+  return response.data.projects;
+};
+
+export const getStudentVotingStatus = async (studentId: string): Promise<ProjectVoteStatus[]> => {
+  const response = await api.get<VotingStatusResponse>(`/api/voting/student/${studentId}/voting-status`);
+  if (!response.data.success) {
+    throw new Error('Failed to fetch voting status');
+  }
+  return response.data.voting_status;
+};
+
+export const castVote = async (data: VoteRequest): Promise<VoteResponse> => {
+  const response = await api.post<VoteResponse>('/api/voting/vote', data);
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Failed to cast vote');
+  }
+  return response.data;
+};
+
+export const removeVote = async (studentId: string, projectType: 'midterm' | 'final'): Promise<VoteResponse> => {
+  const response = await api.delete<VoteResponse>('/api/voting/vote', {
+    data: { student_id: studentId, project_type: projectType }
+  });
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Failed to remove vote');
+  }
+  return response.data;
+};
+
+// Bonus calculation
+export interface BonusCalculationResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    submission_id: number;
+    bonus_awarded: number;
+    vote_count: number;
+    project_type: string;
+  } | null;
+}
+
+export const calculateBonusPoints = async (projectType: 'midterm' | 'final'): Promise<BonusCalculationResponse> => {
+  const response = await api.post<BonusCalculationResponse>(`/api/leaderboard/calculate-bonus/${projectType}`);
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Failed to calculate bonus points');
+  }
+  return response.data;
 };
 
 export default api;
