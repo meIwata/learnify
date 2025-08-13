@@ -469,6 +469,33 @@ export const deleteSubmission = async (submissionId: number): Promise<void> => {
   }
 };
 
+// Update project information (title, description, GitHub URL, visibility)
+export const updateProject = async (
+  submissionId: number, 
+  studentId: string, 
+  updates: {
+    title?: string;
+    description?: string;
+    github_url?: string;
+    is_public?: boolean;
+  }
+): Promise<Submission> => {
+  const response = await api.put<{
+    success: boolean;
+    data: {submission: Submission};
+    message: string;
+    changes: string[];
+  }>(`/api/submissions/${submissionId}`, {
+    student_id: studentId,
+    ...updates
+  });
+  
+  if (!response.data.success) {
+    throw new Error('Failed to update project');
+  }
+  return response.data.data.submission;
+};
+
 // Update project with new screenshots
 export const updateProjectScreenshots = async (submissionId: number, studentId: string, formData: FormData): Promise<Submission> => {
   // Add student_id to formData

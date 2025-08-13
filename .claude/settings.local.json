@@ -7,7 +7,8 @@
       "Bash(curl:*)",
       "Bash(npm run dev:local:*)",
       "Bash(lsof:*)",
-      "Bash(supabase:*)"
+      "Bash(supabase:*)",
+      "Bash(npm run type-check:*)"
     ],
     "deny": []
   }
