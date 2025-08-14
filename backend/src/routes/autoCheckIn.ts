@@ -153,6 +153,51 @@ router.get('/auto/check-ins/:student_id', async (req: Request, res: Response) =>
 });
 
 /**
+ * GET /api/auto/students/:student_id
+ * Get individual student information for authentication
+ */
+router.get('/auto/students/:student_id', async (req: Request, res: Response) => {
+  try {
+    const { student_id } = req.params;
+    
+    // Look up student
+    const { data: student, error: studentError } = await supabaseAdmin
+      .from('students')
+      .select('id, student_id, full_name, created_at')
+      .eq('student_id', student_id)
+      .single();
+
+    if (studentError || !student) {
+      return res.status(403).json({
+        success: false,
+        error: 'STUDENT_NOT_REGISTERED',
+        message: `Student ID '${student_id}' is not registered. Please contact your instructor.`
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        student: {
+          student_id: student.student_id,
+          full_name: student.full_name,
+          uuid: student.id,
+          created_at: student.created_at
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Get student error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'INTERNAL_ERROR',
+      message: 'Internal server error'
+    });
+  }
+});
+
+/**
  * GET /api/auto/students
  * Get all students (for admin purposes)
  */

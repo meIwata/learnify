@@ -69,11 +69,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!exists) {
         throw new Error('Student ID not found. Please check your Student ID or contact your instructor.');
       }
+      
+      // Fetch student information from the backend
+      const response = await fetch(`/api/auto/students/${trimmedStudentId}`);
+      if (!response.ok) {
+        if (response.status === 403) {
+          const errorData = await response.json();
+          if (errorData.error === 'STUDENT_NOT_REGISTERED') {
+            throw new Error(errorData.message || 'Student ID not registered. Please contact your instructor.');
+          }
+        }
+        throw new Error('Failed to fetch student information');
+      }
+      
+      const studentData = await response.json();
+      const studentName = studentData.data.student.full_name;
 
       // If validation passes, set authentication
       setStudentId(trimmedStudentId);
       setIsAuthenticated(true);
       localStorage.setItem('studentId', trimmedStudentId);
+      localStorage.setItem('studentName', studentName);
       setLoginError(null);
     } catch (error: any) {
       console.error('Login error:', error);
@@ -91,6 +107,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsAuthenticated(false);
     setLoginError(null);
     localStorage.removeItem('studentId');
+    localStorage.removeItem('studentName');
   };
 
   const value = {

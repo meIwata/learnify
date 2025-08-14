@@ -9,13 +9,22 @@ import SwiftUI
 
 @main
 struct LearnifyApp: App {
+    @State var authService = AuthenticationService()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .frame(minWidth: 400, minHeight: 600)
-                #if os(macOS)
-                .frame(idealWidth: 500, idealHeight: 700)
-                #endif
+            Group {
+                if authService.isAuthenticated {
+                    ContentView()
+                } else {
+                    LoginView()
+                }
+            }
+            .environment(authService)
+            .frame(minWidth: 400, minHeight: 600)
+            #if os(macOS)
+            .frame(idealWidth: 500, idealHeight: 700)
+            #endif
         }
         #if os(macOS)
         .windowResizability(.contentSize)
