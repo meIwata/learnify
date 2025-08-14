@@ -5,7 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 **Learnify** is a gamified learning system consisting of:
-- **Frontend**: macOS native app built with Swift/SwiftUI 
+- **Mobile**: iOS native app built with Swift/SwiftUI 
+- **Frontend**: Web frontend (Vite) deployed on Zeabur 
 - **Backend**: Supabase (PostgreSQL database, Auth, Storage) deployed on Zeabur
 
 ## Project Structure
@@ -13,14 +14,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 FCU/
 ├── PRD.md              # Product Requirements Document
-├── Learnify/           # macOS SwiftUI application (Xcode project)
+├── Learnify/           # iOS SwiftUI application (Xcode project)
 ├── frontend/           # Web frontend (currently empty)
 └── backend/            # Supabase configuration and edge functions
 ```
 
 ## Architecture
 
-- **macOS Client**: SwiftUI app in `Learnify/` directory using supabase-swift SDK
+- **iOS Client**: SwiftUI app in `Learnify/` directory using supabase-swift SDK
 - **Web Frontend**: Located in `frontend/` directory (currently empty)
 - **Authentication**: Student ID-based auto-registration (no JWT required for check-ins)
 - **Database**: Supabase PostgreSQL with simplified schema for auto-registration
@@ -51,7 +52,7 @@ npm run type-check      # TypeScript validation
 npm run lint            # Code linting
 ```
 
-### macOS App (Learnify/)
+### iOS App (Learnify/)
 - **Build**: Open `Learnify.xcodeproj` in Xcode and build (⌘+B)
 - **Run**: Run from Xcode (⌘+R) or use `xcodebuild` command line
 - **Test**: Run tests in Xcode (⌘+U)
@@ -66,7 +67,7 @@ npm run lint            # Code linting
 - ✅ **Smart Quiz System**: Adaptive learning algorithm with SwiftUI questions
 - ✅ **Local Dev**: Full local Supabase development stack
 - ✅ **Deployment**: Zeabur deployment configuration ready
-- ✅ **macOS app**: Native SwiftUI app with quiz integration
+- ✅ **iOS app**: Native SwiftUI app with quiz integration
 - ✅ **Web frontend**: React app with quiz functionality
 
 ## Key Features
@@ -112,10 +113,10 @@ Core entities include:
 - **API Testing**: Use Supabase Studio at http://localhost:54323 for database inspection
 - **Migrations**: Database schema managed through Supabase migrations
 
-### macOS App Development
+### iOS App Development
 - Use `supabase-swift` library for all backend interactions
 - Student ID-based check-ins (no authentication tokens required)
-- Follow SwiftUI best practices for macOS apps
+- Follow SwiftUI best practices for iOS apps
 - Integrate with auto-registration API endpoints
 
 #### SwiftUI Modern API Guidelines

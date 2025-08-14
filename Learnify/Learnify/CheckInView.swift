@@ -8,18 +8,17 @@
 import SwiftUI
 
 struct CheckInView: View {
-    @AppStorage("student_id") private var storedStudentId: String = ""
-    @AppStorage("student_name") private var storedStudentName: String = ""
-    @State private var studentId: String = ""
-    @State private var fullName: String = ""
+    @Environment(AuthenticationService.self) var authService
     @State private var isLoading: Bool = false
     @State private var showingAlert: Bool = false
     @State private var alertTitle: String = ""
     @State private var alertMessage: String = ""
     @State private var lastCheckInResponse: CheckInResponse?
     
-    private var hasStoredData: Bool {
-        !storedStudentId.isEmpty && !storedStudentName.isEmpty
+    private var isFormValid: Bool {
+        return authService.isAuthenticated && 
+               authService.currentStudentId != nil && 
+               authService.currentStudentName != nil
     }
     
     var body: some View {
@@ -50,77 +49,34 @@ struct CheckInView: View {
                 }
                 .padding(.top, 20)
                 
-                // Form
-                VStack(spacing: 25) {
-                    if hasStoredData {
-                        // Show stored data as labels
-                        VStack(spacing: 15) {
-                            HStack {
-                                Text("Student ID:")
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                Text(storedStudentId)
-                                    .font(.body)
-                                    .foregroundColor(.secondary)
-                                    .padding(.vertical, 8)
-                                    .padding(.horizontal, 12)
-                                    .background(Color.gray.opacity(0.1))
-                                    .cornerRadius(8)
-                            }
-                            
-                            HStack {
-                                Text("Full Name:")
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                Text(storedStudentName)
-                                    .font(.body)
-                                    .foregroundColor(.secondary)
-                                    .padding(.vertical, 8)
-                                    .padding(.horizontal, 12)
-                                    .background(Color.gray.opacity(0.1))
-                                    .cornerRadius(8)
-                            }
-                        }
-                    } else {
-                        // Show input fields for first-time users
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Student ID")
-                                .font(.headline)
-                                .foregroundColor(.primary)
-                            
-                            TextField("Enter your student ID (e.g., STUDENT2025)", text: $studentId)
-                                .textFieldStyle(.roundedBorder)
-                                .font(.body)
-                                #if os(iOS)
-                                .autocapitalization(.allCharacters)
-                                .disableAutocorrection(true)
-                                .submitLabel(.next)
-                                #endif
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Full Name")
-                                .font(.headline)
-                                .foregroundColor(.primary)
-                            
-                            TextField("Enter your full name", text: $fullName)
-                                .textFieldStyle(.roundedBorder)
-                                .font(.body)
-                                #if os(iOS)
-                                .autocapitalization(.words)
-                                .disableAutocorrection(false)
-                                .submitLabel(.done)
-                                #endif
-                                .onSubmit {
-                                    if isFormValid {
-                                        Task {
-                                            await performCheckIn()
-                                        }
-                                    }
-                                }
-                        }
+                // User Information Display
+                VStack(spacing: 15) {
+                    HStack {
+                        Text("Student ID:")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text(authService.currentStudentId ?? "Unknown")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(8)
+                    }
+                    
+                    HStack {
+                        Text("Full Name:")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text(authService.currentStudentName ?? "Unknown")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(8)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -185,13 +141,6 @@ struct CheckInView: View {
                                 Text("Welcome, \(data.student_name)")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
-                                
-                                if data.is_new_student {
-                                    Text("New student registered!")
-                                        .font(.caption)
-                                        .foregroundColor(.blue)
-                                        .fontWeight(.medium)
-                                }
                             }
                         }
                         
@@ -205,6 +154,32 @@ struct CheckInView: View {
                     .cornerRadius(12)
                     .padding(.horizontal, 20)
                     .transition(.scale.combined(with: .opacity))
+                }
+                
+                // Logout Button
+                VStack(spacing: 16) {
+                    Divider()
+                        .padding(.horizontal, 20)
+                    
+                    Button(action: {
+                        Task {
+                            await authService.logout()
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                                .font(.caption)
+                            
+                            Text("Sign Out")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                        }
+                        .foregroundStyle(.red)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(8)
+                    }
                 }
                 
                 Spacer(minLength: 50)
@@ -221,32 +196,23 @@ struct CheckInView: View {
         }
     }
     
-    private var isFormValid: Bool {
-        if hasStoredData {
-            return true
-        } else {
-            return !studentId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-                   !fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        }
-    }
-    
     private func performCheckIn() async {
-        guard isFormValid else { return }
+        guard isFormValid,
+              let studentId = authService.currentStudentId,
+              let fullName = authService.currentStudentName else { 
+            return 
+        }
         
         // Dismiss keyboard
         hideKeyboard()
         
         isLoading = true
         
-        // Use stored data if available, otherwise use form input
-        let checkInStudentId = hasStoredData ? storedStudentId : studentId.trimmingCharacters(in: .whitespacesAndNewlines)
-        let checkInFullName = hasStoredData ? storedStudentName : fullName.trimmingCharacters(in: .whitespacesAndNewlines)
-        
         do {
-            print("Performing check-in...")
+            print("Performing check-in for authenticated user...")
             let response = try await APIService.shared.checkIn(
-                studentId: checkInStudentId,
-                fullName: checkInFullName
+                studentId: studentId,
+                fullName: fullName
             )
             
             await MainActor.run {
@@ -254,16 +220,7 @@ struct CheckInView: View {
                     self.lastCheckInResponse = response
                 }
                 
-                if response.success {
-                    // Save student data to AppStorage after successful check-in
-                    if !hasStoredData {
-                        self.storedStudentId = checkInStudentId
-                        self.storedStudentName = checkInFullName
-                        // Clear form fields after saving to storage
-                        self.studentId = ""
-                        self.fullName = ""
-                    }
-                } else {
+                if !response.success {
                     // Show error if API returned success: false
                     self.alertTitle = "Check-in Failed"
                     self.alertMessage = response.message
@@ -273,6 +230,18 @@ struct CheckInView: View {
                 self.isLoading = false
             }
             
+        } catch APIError.studentNotRegistered(let message) {
+            await MainActor.run {
+                self.alertTitle = "Student Not Registered"
+                self.alertMessage = message
+                self.showingAlert = true
+                self.isLoading = false
+                
+                // Log out the user since their student ID is no longer valid
+                Task {
+                    await self.authService.logout()
+                }
+            }
         } catch {
             await MainActor.run {
                 self.alertTitle = "Error"
@@ -292,4 +261,5 @@ struct CheckInView: View {
 
 #Preview {
     CheckInView()
+        .environment(AuthenticationService())
 }

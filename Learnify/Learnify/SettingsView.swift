@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @Environment(AuthenticationService.self) var authService
     @AppStorage("student_id") private var studentId: String = ""
     @AppStorage("student_name") private var studentName: String = ""
     @State private var isEditing = false
@@ -73,6 +74,18 @@ struct SettingsView: View {
                         .foregroundColor(.red)
                     }
                 }
+
+                Section {
+                    if !studentId.isEmpty {
+                        Button("Log Out") {
+                            isEditing = false
+                            Task {
+                                await authService.logout()
+                            }
+                        }
+                        .foregroundColor(.red)
+                    }
+                }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
@@ -100,4 +113,5 @@ struct SettingsView: View {
 
 #Preview {
     SettingsView()
+        .environment(AuthenticationService())
 }

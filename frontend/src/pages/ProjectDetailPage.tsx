@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Github, Calendar, User, BookOpen, GraduationCap, ExternalLink, Image as ImageIcon, StickyNote, Edit2, Trash2, Save, Plus, Loader, X, ZoomIn } from 'lucide-react';
-import { getSubmission, getProjectNote, createOrUpdateProjectNote, updateProjectNote, deleteProjectNote, updateProjectScreenshots, deleteProjectScreenshot } from '../lib/api';
+import { useParams, Link } from 'react-router-dom';
+import { ArrowLeft, Github, Calendar, User, BookOpen, GraduationCap, ExternalLink, Image as ImageIcon, StickyNote, Edit2, Trash2, Save, Plus, Loader, ZoomIn } from 'lucide-react';
+import { getSubmission, getProjectNote, createOrUpdateProjectNote, deleteProjectNote, updateProjectScreenshots, deleteProjectScreenshot } from '../lib/api';
 import type { Submission, ProjectNote } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import ImageGallery from '../components/ImageGallery';
 import ProjectVoteButton from '../components/ProjectVoteButton';
+import EditProjectModal from '../components/EditProjectModal';
 
 const ProjectDetailPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
-  const navigate = useNavigate();
   const { studentId } = useAuth();
   
   const [project, setProject] = useState<Submission | null>(null);
@@ -22,6 +22,7 @@ const ProjectDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [notesLoading, setNotesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isEditingProject, setIsEditingProject] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -183,6 +184,20 @@ const ProjectDetailPage: React.FC = () => {
   };
 
   const canUpdateScreenshots = project && project.student_id === studentId;
+  const canEditProject = project && project.student_id === studentId;
+
+  const handleEditProject = () => {
+    setIsEditingProject(true);
+  };
+
+  const handleProjectUpdate = (updatedProject: Submission) => {
+    setProject(updatedProject);
+    setIsEditingProject(false);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditingProject(false);
+  };
 
   const getProjectTypeIcon = (type: string) => {
     return type === 'midterm' ? 
@@ -254,7 +269,18 @@ const ProjectDetailPage: React.FC = () => {
         {/* Project Header */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
           <div className="mb-4">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">{project.title}</h1>
+            <div className="flex items-start justify-between mb-2">
+              <h1 className="text-2xl font-bold text-gray-900">{project.title}</h1>
+              {canEditProject && (
+                <button
+                  onClick={handleEditProject}
+                  className="inline-flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  <span>Edit Project</span>
+                </button>
+              )}
+            </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <User className="w-4 h-4 text-gray-400" />
@@ -541,6 +567,17 @@ const ProjectDetailPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Edit Project Modal */}
+      {isEditingProject && project && studentId && (
+        <EditProjectModal
+          project={project}
+          studentId={studentId}
+          isOpen={isEditingProject}
+          onClose={handleCloseEditModal}
+          onUpdate={handleProjectUpdate}
+          hideVisibilityOption={true}
+        />
+      )}
     </div>
   );
 };

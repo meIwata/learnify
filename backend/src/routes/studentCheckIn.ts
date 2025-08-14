@@ -54,7 +54,7 @@ router.post(
 
       // Look up student by student_id
       const { data: profile, error: profileError } = await supabaseAdmin
-        .from('student_profiles')
+        .from('students')
         .select('id, student_id, full_name')
         .eq('student_id', student_id)
         .single();
@@ -63,16 +63,17 @@ router.post(
       let actualStudentId: string;
 
       if (profileError || !profile) {
-        // Student doesn't exist, register them first
-        console.log(`🆕 Registering new student: ${student_id}`);
-        const result = await studentCheckInService.registerStudent(student_id, full_name);
-        userId = result.userId;
-        actualStudentId = result.studentId;
-      } else {
-        // Student exists
-        userId = profile.id;
-        actualStudentId = profile.student_id;
+        // Student doesn't exist - prevent new signups
+        return res.status(403).json({
+          success: false,
+          error: 'STUDENT_NOT_REGISTERED',
+          message: `Student ID '${student_id}' is not registered. Please contact your instructor.`
+        });
       }
+
+      // Student exists
+      userId = profile.id;
+      actualStudentId = profile.student_id;
 
       // Check if student can check-in (cooldown period)
       const cooldownResult = await studentCheckInService.checkCooldown(userId);
@@ -140,7 +141,7 @@ router.post(
 
       // Look up student by student_id
       const { data: profile, error: profileError } = await supabaseAdmin
-        .from('student_profiles')
+        .from('students')
         .select('id, student_id')
         .eq('student_id', student_id)
         .single();
@@ -187,60 +188,16 @@ router.post(
 
 /**
  * POST /api/student/register
- * Register a new student (optional - auto-registration happens on first check-in)
+ * Student registration is disabled - only existing students can access the system
  */
 router.post(
   '/student/register',
   async (req: any, res: Response) => {
-    try {
-      const validationResult = studentRegisterSchema.safeParse(req.body);
-      if (!validationResult.success) {
-        res.status(400).json({
-          success: false,
-          error: 'INVALID_REQUEST',
-          message: 'Invalid request body: ' + validationResult.error.message
-        });
-        return;
-      }
-
-      const { student_id, full_name } = validationResult.data;
-
-      // Check if student already exists
-      const { data: existingProfile } = await supabaseAdmin
-        .from('student_profiles')
-        .select('student_id')
-        .eq('student_id', student_id)
-        .single();
-
-      if (existingProfile) {
-        res.status(409).json({
-          success: false,
-          error: 'STUDENT_EXISTS',
-          message: `Student with ID '${student_id}' already exists`
-        });
-        return;
-      }
-
-      // Register new student
-      const result = await studentCheckInService.registerStudent(student_id, full_name);
-
-      res.status(201).json({
-        success: true,
-        data: {
-          student_id: result.studentId,
-          user_id: result.userId
-        },
-        message: `Student ${result.studentId} registered successfully`
-      });
-
-    } catch (error) {
-      console.error('Student registration error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'INTERNAL_ERROR',
-        message: 'Failed to register student'
-      });
-    }
+    res.status(403).json({
+      success: false,
+      error: 'REGISTRATION_DISABLED',
+      message: 'Student registration is disabled. Only existing registered students can access the system. Please contact your instructor.'
+    });
   }
 );
 

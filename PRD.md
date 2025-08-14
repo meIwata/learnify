@@ -13,7 +13,7 @@ Of course. Here is a detailed Product Requirements Document (PRD) for a gamified
 
 ### 1. Introduction & Vision
 
-**Project "Learnify"** is a macOS desktop application designed to transform the traditional learning experience into an engaging, interactive, and motivating journey. By incorporating gamification elements such as points, leaderboards, and achievements, we aim to increase student participation, improve knowledge retention, and foster a sense of community and friendly competition. The system will provide students with a clear view of their progress and instructors with valuable insights into class-wide performance.
+**Project "Learnify"** is a iOS desktop application designed to transform the traditional learning experience into an engaging, interactive, and motivating journey. By incorporating gamification elements such as points, leaderboards, and achievements, we aim to increase student participation, improve knowledge retention, and foster a sense of community and friendly competition. The system will provide students with a clear view of their progress and instructors with valuable insights into class-wide performance.
 
 ### 2. Goals & Objectives
 
@@ -46,7 +46,7 @@ Of course. Here is a detailed Product Requirements Document (PRD) for a gamified
 ### 4. System Architecture & Tech Stack
 
 *   **Client (Frontend):**
-    *   **Platform:** macOS (Native App)
+    *   **Platform:** iOS (Native App)
     *   **Language/Framework:** Swift / SwiftUI for a modern, responsive UI.
     *   **Key Library:** `supabase-swift` for direct interaction with the Supabase backend.
 
@@ -60,7 +60,7 @@ Of course. Here is a detailed Product Requirements Document (PRD) for a gamified
 
 #### High-Level Diagram
 ```
-[macOS Client (SwiftUI)] <--- HTTPS/WSS ---> [Supabase API Gateway on Zeabur]
+[iOS Client (SwiftUI)] <--- HTTPS/WSS ---> [Supabase API Gateway on Zeabur]
                                                    |
                      +-----------------------------+-----------------------------+
                      |                             |                             |

@@ -6,7 +6,9 @@
       "Bash(supabase migration:*)",
       "Bash(curl:*)",
       "Bash(npm run dev:local:*)",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "Bash(supabase:*)",
+      "Bash(npm run type-check:*)"
     ],
     "deny": []
   }

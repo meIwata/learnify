@@ -72,6 +72,7 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({ filterType = 'all' })
     });
   };
 
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -271,6 +272,7 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({ filterType = 'all' })
           ))}
         </div>
       )}
+
     </div>
   );
 };

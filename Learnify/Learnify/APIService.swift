@@ -73,6 +73,16 @@ final class APIService: NSObject, URLSessionTaskDelegate {
                 
                 guard (200...299).contains(httpResponse.statusCode) else {
                     print("❌ Server error: \(httpResponse.statusCode)")
+                    
+                    // Handle 403 STUDENT_NOT_REGISTERED error specifically
+                    if httpResponse.statusCode == 403 {
+                        if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data),
+                           errorResponse.error == "STUDENT_NOT_REGISTERED" {
+                            let message = errorResponse.message ?? "Student ID not registered. Please contact your instructor."
+                            throw APIError.studentNotRegistered(message)
+                        }
+                    }
+                    
                     throw APIError.serverError(httpResponse.statusCode)
                 }
                 
@@ -971,6 +981,16 @@ final class APIService: NSObject, URLSessionTaskDelegate {
                 
                 guard (200...299).contains(httpResponse.statusCode) else {
                     print("❌ Quiz submission server error: \(httpResponse.statusCode)")
+                    
+                    // Handle 403 STUDENT_NOT_REGISTERED error specifically
+                    if httpResponse.statusCode == 403 {
+                        if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data),
+                           errorResponse.error == "STUDENT_NOT_REGISTERED" {
+                            let message = errorResponse.message ?? "Student ID not registered. Please contact your instructor."
+                            throw APIError.studentNotRegistered(message)
+                        }
+                    }
+                    
                     throw APIError.serverError(httpResponse.statusCode)
                 }
                 
@@ -1095,6 +1115,109 @@ final class APIService: NSObject, URLSessionTaskDelegate {
         throw lastError ?? APIError.networkError("Failed to fetch question stats after multiple retries.")
     }
     
+    // MARK: - Student Information
+    
+    func getStudentInfo(studentId: String) async throws -> Student {
+        let url = URL(string: "\(baseURL)/api/auto/students/\(studentId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        print("📤 Fetching student info: \(studentId)")
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        config.timeoutIntervalForResource = 60.0
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.httpMaximumConnectionsPerHost = 1
+        let session = URLSession(configuration: config)
+
+        do {
+            let (data, response) = try await session.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("❌ Invalid response type for student info")
+                throw APIError.invalidResponse
+            }
+            
+            print("✅ Student info HTTP Status: \(httpResponse.statusCode)")
+            
+            if httpResponse.statusCode == 403 {
+                if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data),
+                   errorResponse.error == "STUDENT_NOT_REGISTERED" {
+                    let message = errorResponse.message ?? "Student ID not registered. Please contact your instructor."
+                    throw APIError.studentNotRegistered(message)
+                }
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                throw APIError.serverError(httpResponse.statusCode)
+            }
+            
+            let studentResponse = try JSONDecoder().decode(StudentInfoResponse.self, from: data)
+            return studentResponse.data.student
+            
+        } catch let error as APIError {
+            throw error
+        } catch {
+            print("❌ Student info fetch failed with error: \(error)")
+            throw APIError.networkError(error.localizedDescription)
+        }
+    }
+
+    // MARK: - Student Validation
+    
+    func checkStudentExists(studentId: String) async throws -> Bool {
+        let url = URL(string: "\(baseURL)/api/auto/students/\(studentId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        print("📤 Checking if student exists: \(studentId)")
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        config.timeoutIntervalForResource = 60.0
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.httpMaximumConnectionsPerHost = 1
+        let session = URLSession(configuration: config)
+
+        do {
+            let (data, response) = try await session.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("❌ Invalid response type for student existence check")
+                return false
+            }
+            
+            print("✅ Student existence check HTTP Status: \(httpResponse.statusCode)")
+            
+            if httpResponse.statusCode == 404 {
+                // Student not found
+                return false
+            } else if httpResponse.statusCode == 403 {
+                // Check if it's STUDENT_NOT_REGISTERED error
+                if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data),
+                   errorResponse.error == "STUDENT_NOT_REGISTERED" {
+                    return false
+                }
+                // For other 403 errors, assume student might exist but there's a different issue
+                return true
+            } else if (200...299).contains(httpResponse.statusCode) {
+                // Success means student exists
+                return true
+            } else {
+                // For other errors, assume student might exist but there's a different issue
+                return true
+            }
+            
+        } catch {
+            print("❌ Student existence check failed with error: \(error)")
+            // For network errors, assume student might exist to avoid blocking valid users
+            return true
+        }
+    }
+    
     func getAllQuestionsWithAttempts(studentId: String) async throws -> AllQuestionsData {
         let url = URL(string: "\(baseURL)/api/quiz/questions/all/\(studentId)")!
         var request = URLRequest(url: url)
@@ -1155,6 +1278,38 @@ struct Student: Codable, Identifiable {
     let student_id: String
     let full_name: String
     let created_at: String
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case uuid
+        case student_id
+        case full_name
+        case created_at
+    }
+
+    init(id: String, student_id: String, full_name: String, created_at: String) {
+        self.id = id
+        self.student_id = student_id
+        self.full_name = full_name
+        self.created_at = created_at
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let id = try container.decodeIfPresent(String.self, forKey: .id) ?? container.decode(String.self, forKey: .uuid)
+        let student_id = try container.decode(String.self, forKey: .student_id)
+        let full_name = try container.decode(String.self, forKey: .full_name)
+        let created_at = try container.decode(String.self, forKey: .created_at)
+        self.init(id: id, student_id: student_id, full_name: full_name, created_at: created_at)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(student_id, forKey: .student_id)
+        try container.encode(full_name, forKey: .full_name)
+        try container.encode(created_at, forKey: .created_at)
+    }
 }
 
 struct StudentsResponse: Codable {
@@ -1262,6 +1417,23 @@ struct CheckInData: Codable {
     let is_new_student: Bool
 }
 
+// MARK: - Error Response Models
+
+struct ErrorResponse: Codable {
+    let success: Bool
+    let error: String?
+    let message: String?
+}
+
+struct StudentInfoResponse: Codable {
+    let success: Bool
+    let data: StudentInfoData
+}
+
+struct StudentInfoData: Codable {
+    let student: Student
+}
+
 // MARK: - Error Handling
 
 enum APIError: Error, LocalizedError {
@@ -1270,6 +1442,7 @@ enum APIError: Error, LocalizedError {
     case serverError(Int)
     case decodingError
     case networkError(String)
+    case studentNotRegistered(String)
     
     var errorDescription: String? {
         switch self {
@@ -1283,6 +1456,8 @@ enum APIError: Error, LocalizedError {
             return "Failed to decode the server's response. The data format may be incorrect."
         case .networkError(let message):
             return "A network error occurred: \(message)"
+        case .studentNotRegistered(let message):
+            return message
         }
     }
 }

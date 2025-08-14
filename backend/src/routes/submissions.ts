@@ -59,6 +59,14 @@ const getSubmissionsSchema = z.object({
     offset: z.string().regex(/^\d+$/).optional()
 });
 
+const updateProjectSchema = z.object({
+    student_id: z.string().min(1, 'Student ID is required'),
+    title: z.string().min(1, 'Title is required').optional(),
+    description: z.string().optional(),
+    github_url: z.string().url('Invalid GitHub URL').optional(),
+    is_public: z.string().transform(val => val === 'true').optional()
+});
+
 // Helper function to ensure student exists
 async function ensureStudentExists(studentId: string, fullName?: string) {
     try {
@@ -339,6 +347,42 @@ router.post('/', upload.fields([
                 success: false,
                 error: 'Project type (midterm or final) is required for project submissions'
             });
+        }
+
+        // Check for duplicate project submissions
+        if (submission_type === 'project' && project_type) {
+            const { data: existingProject, error: checkError } = await supabase
+                .from('submissions')
+                .select('id, title, created_at')
+                .eq('student_id', student_id)
+                .eq('submission_type', 'project')
+                .eq('project_type', project_type)
+                .single();
+
+            if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
+                console.error('Error checking for duplicate project:', checkError);
+                return res.status(500).json({
+                    success: false,
+                    error: 'Failed to validate project submission',
+                    message: 'Could not check for existing projects'
+                });
+            }
+
+            if (existingProject) {
+                return res.status(409).json({
+                    success: false,
+                    error: 'Duplicate project submission',
+                    message: `You have already submitted a ${project_type} project titled "${existingProject.title}". Each student can only submit one ${project_type} project.`,
+                    details: {
+                        existing_project: {
+                            id: existingProject.id,
+                            title: existingProject.title,
+                            submitted_at: existingProject.created_at
+                        },
+                        suggestion: 'You can delete your existing project and submit a new one, or add screenshots to your current project.'
+                    }
+                });
+            }
         }
 
         // Create submission record
@@ -963,15 +1007,26 @@ router.delete('/:id/files/:fileId', async (req: Request, res: Response) => {
     }
 });
 
-// DELETE /api/submissions/:id - Delete a submission
-router.delete('/:id', async (req: Request, res: Response) => {
+// PUT /api/submissions/:id - Update project submission (owner only)
+router.put('/:id', async (req: Request, res: Response) => {
     try {
         const submissionId = req.params.id;
+        const validation = updateProjectSchema.safeParse(req.body);
+        
+        if (!validation.success) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid request data',
+                details: validation.error.issues
+            });
+        }
 
-        // First get the submission to check if it has a file
-        const { data: submission, error: fetchError } = await supabase
+        const { student_id, title, description, github_url, is_public } = validation.data;
+
+        // First verify the submission exists and belongs to the student
+        const { data: existingSubmission, error: fetchError } = await supabase
             .from('submissions')
-            .select('file_path')
+            .select('id, student_id, submission_type, project_type, title, description, github_url, is_public')
             .eq('id', submissionId)
             .single();
 
@@ -983,11 +1038,184 @@ router.delete('/:id', async (req: Request, res: Response) => {
             });
         }
 
-        // Delete the file from storage if it exists
+        // Verify ownership
+        if (existingSubmission.student_id !== student_id) {
+            return res.status(403).json({
+                success: false,
+                error: 'Access denied',
+                message: 'You can only edit your own submissions'
+            });
+        }
+
+        // Only allow editing project submissions
+        if (existingSubmission.submission_type !== 'project') {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid submission type',
+                message: 'Only project submissions can be edited'
+            });
+        }
+
+        // Prepare update data - only update fields that were provided
+        const updateData: any = {
+            updated_at: new Date().toISOString()
+        };
+
+        if (title !== undefined) {
+            updateData.title = title;
+        }
+        if (description !== undefined) {
+            updateData.description = description;
+        }
+        if (github_url !== undefined) {
+            updateData.github_url = github_url;
+        }
+        if (is_public !== undefined) {
+            updateData.is_public = is_public;
+        }
+
+        // Update the submission
+        const { data: updatedSubmission, error: updateError } = await supabase
+            .from('submissions')
+            .update(updateData)
+            .eq('id', submissionId)
+            .select(`
+                *,
+                students!inner(full_name)
+            `)
+            .single();
+
+        if (updateError) {
+            console.error('Update submission error:', updateError);
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to update submission',
+                message: updateError.message
+            });
+        }
+
+        // Get multiple files for this submission
+        const filesBySubmission = await getSubmissionFiles([updatedSubmission.id]);
+
+        // Generate public URL for file if present
+        let fileUrl = null;
+        if (updatedSubmission.file_path) {
+            const { data: urlData } = supabase.storage
+                .from('submissions')
+                .getPublicUrl(updatedSubmission.file_path);
+            fileUrl = urlData.publicUrl;
+        }
+
+        res.json({
+            success: true,
+            data: {
+                submission: {
+                    ...updatedSubmission,
+                    file_url: fileUrl,
+                    files: filesBySubmission[updatedSubmission.id] || [],
+                    student_name: updatedSubmission.students.full_name
+                }
+            },
+            message: 'Project updated successfully',
+            changes: Object.keys(updateData).filter(key => key !== 'updated_at')
+        });
+
+    } catch (error) {
+        console.error('Update submission error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error',
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+
+// DELETE /api/submissions/:id - Delete a submission with related data cleanup
+router.delete('/:id', async (req: Request, res: Response) => {
+    try {
+        const submissionId = req.params.id;
+        const { student_id } = req.query;
+
+        // Get the submission to verify ownership and check for files
+        const { data: submission, error: fetchError } = await supabase
+            .from('submissions')
+            .select('id, student_id, submission_type, project_type, file_path, title')
+            .eq('id', submissionId)
+            .single();
+
+        if (fetchError) {
+            return res.status(404).json({
+                success: false,
+                error: 'Submission not found',
+                message: fetchError.message
+            });
+        }
+
+        // Verify ownership if student_id is provided (for non-admin deletions)
+        if (student_id && submission.student_id !== student_id) {
+            return res.status(403).json({
+                success: false,
+                error: 'Access denied',
+                message: 'You can only delete your own submissions'
+            });
+        }
+
+        // Get all associated files for cleanup
+        const { data: submissionFiles } = await supabase
+            .from('submission_files')
+            .select('file_path')
+            .eq('submission_id', submissionId);
+
+        // Collect all file paths to delete from storage
+        const filesToDelete: string[] = [];
         if (submission.file_path) {
+            filesToDelete.push(submission.file_path);
+        }
+        if (submissionFiles) {
+            filesToDelete.push(...submissionFiles.map(f => f.file_path));
+        }
+
+        // Clean up related data for project submissions
+        if (submission.submission_type === 'project') {
+            // Delete project votes (CASCADE will handle this, but we'll be explicit)
+            const { error: votesError } = await supabase
+                .from('project_votes')
+                .delete()
+                .eq('submission_id', submissionId);
+
+            if (votesError) {
+                console.error('Error deleting project votes:', votesError);
+                // Continue with deletion even if votes cleanup fails
+            }
+
+            // Delete project notes (feedback from other students)  
+            const { error: notesError } = await supabase
+                .from('project_notes')
+                .delete()
+                .eq('submission_id', submissionId);
+
+            if (notesError) {
+                console.error('Error deleting project notes:', notesError);
+                // Continue with deletion even if notes cleanup fails
+            }
+        }
+
+        // Delete submission files records
+        const { error: filesError } = await supabase
+            .from('submission_files')
+            .delete()
+            .eq('submission_id', submissionId);
+
+        if (filesError) {
+            console.error('Error deleting submission files:', filesError);
+            // Continue with deletion even if files cleanup fails
+        }
+
+        // Delete files from storage
+        if (filesToDelete.length > 0) {
             const { error: storageError } = await supabase.storage
                 .from('submissions')
-                .remove([submission.file_path]);
+                .remove(filesToDelete);
 
             if (storageError) {
                 console.error('Storage deletion error:', storageError);
@@ -995,7 +1223,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
             }
         }
 
-        // Delete the submission record
+        // Finally, delete the submission record
         const { error: deleteError } = await supabase
             .from('submissions')
             .delete()
@@ -1010,9 +1238,19 @@ router.delete('/:id', async (req: Request, res: Response) => {
             });
         }
 
+        const isProject = submission.submission_type === 'project';
+        const projectTypeMsg = isProject ? ` (${submission.project_type} project)` : '';
+        
         res.json({
             success: true,
-            message: 'Submission deleted successfully'
+            message: `${isProject ? 'Project' : 'Submission'} "${submission.title}"${projectTypeMsg} deleted successfully`,
+            details: {
+                deleted_submission_id: submissionId,
+                was_project: isProject,
+                project_type: isProject ? submission.project_type : null,
+                files_deleted: filesToDelete.length,
+                cleanup_performed: isProject ? ['votes', 'notes', 'files'] : ['files']
+            }
         });
 
     } catch (error) {

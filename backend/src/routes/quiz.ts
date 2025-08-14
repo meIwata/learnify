@@ -249,46 +249,20 @@ router.post('/submit-answer', async (req: Request, res: Response) => {
       });
     }
 
-    // Auto-register student if needed
+    // Check if student exists (no auto-registration)
     const { data: existingStudent, error: studentCheckError } = await supabase
       .from('students')
       .select('id, student_id, full_name')
       .eq('student_id', student_id)
       .single();
 
-    let studentUuid: string;
-    let studentName: string;
-
     if (studentCheckError && studentCheckError.code === 'PGRST116') {
-      // Student doesn't exist, create them
-      if (!full_name) {
-        return res.status(400).json({
-          success: false,
-          error: 'MISSING_FULL_NAME',
-          message: 'full_name is required for new students'
-        });
-      }
-
-      const { data: newStudent, error: createError } = await supabase
-        .from('students')
-        .insert({
-          student_id,
-          full_name
-        })
-        .select('id, student_id, full_name')
-        .single();
-
-      if (createError || !newStudent) {
-        console.error('Student creation error:', createError);
-        return res.status(500).json({
-          success: false,
-          error: 'STUDENT_CREATION_FAILED',
-          message: 'Failed to create student record'
-        });
-      }
-
-      studentUuid = newStudent.id;
-      studentName = newStudent.full_name;
+      // Student doesn't exist - prevent new signups
+      return res.status(403).json({
+        success: false,
+        error: 'STUDENT_NOT_REGISTERED',
+        message: `Student ID '${student_id}' is not registered. Please contact your instructor.`
+      });
     } else if (studentCheckError) {
       console.error('Student lookup error:', studentCheckError);
       return res.status(500).json({
@@ -296,10 +270,9 @@ router.post('/submit-answer', async (req: Request, res: Response) => {
         error: 'STUDENT_LOOKUP_FAILED',
         message: 'Failed to lookup student'
       });
-    } else {
-      studentUuid = existingStudent.id;
-      studentName = existingStudent.full_name;
     }
+
+    const studentUuid = existingStudent.id;
 
     // Get the question to check the correct answer
     const { data: question, error: questionError } = await supabase
@@ -319,7 +292,24 @@ router.post('/submit-answer', async (req: Request, res: Response) => {
 
     // Check if answer is correct and calculate points
     const isCorrect = selected_answer === question.correct_answer;
-    const pointsEarned = isCorrect ? 5 : 0; // 5 points per correct answer
+
+    // Award points only on the first correct attempt for this question
+    let alreadyMastered = false;
+    if (isCorrect) {
+      const { data: priorCorrect, error: priorCorrectError } = await supabase
+        .from('student_quiz_attempts')
+        .select('id')
+        .eq('student_id', student_id)
+        .eq('question_id', question_id)
+        .eq('is_correct', true)
+        .limit(1);
+
+      if (!priorCorrectError && priorCorrect && priorCorrect.length > 0) {
+        alreadyMastered = true;
+      }
+    }
+
+    const pointsEarned = isCorrect && !alreadyMastered ? 5 : 0; // 5 points only for first correct
 
     // Record the attempt
     const { data: attempt, error: attemptError } = await supabase
@@ -357,7 +347,9 @@ router.post('/submit-answer', async (req: Request, res: Response) => {
         explanation: question.explanation
       },
       message: isCorrect 
-        ? `Correct! You earned ${pointsEarned} points.`
+        ? (pointsEarned > 0 
+            ? `Correct! You earned ${pointsEarned} points.` 
+            : 'Correct! No additional points awarded (already mastered).')
         : `Incorrect. The correct answer was ${question.correct_answer}.`
     });
 
