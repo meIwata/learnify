@@ -990,4 +990,33 @@ export const calculateBonusPoints = async (projectType: 'midterm' | 'final'): Pr
   return response.data;
 };
 
+// Quiz score fix interface
+export interface QuizScoreFixResponse {
+  success: boolean;
+  message: string;
+  data: {
+    students_processed: number;
+    total_points_corrected: number;
+    details: Array<{
+      student_id: string;
+      old_points: number;
+      new_points: number;
+      points_corrected: number;
+      unique_questions_answered: number;
+      total_attempts: number;
+    }>;
+  };
+}
+
+// Fix quiz scores - remove duplicate scoring
+export const fixQuizScores = async (adminStudentId: string): Promise<QuizScoreFixResponse> => {
+  const response = await api.post<QuizScoreFixResponse>('/api/admin/fix-quiz-scores', {}, {
+    headers: { 'x-student-id': adminStudentId }
+  });
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Failed to fix quiz scores');
+  }
+  return response.data;
+};
+
 export default api;
