@@ -68,8 +68,15 @@ export const getAllStudents = async (): Promise<Student[]> => {
 };
 
 export const checkInStudent = async (data: CheckInRequest): Promise<CheckInResponse> => {
-  const response = await api.post<CheckInResponse>('/api/auto/check-in', data);
-  return response.data;
+  try {
+    const response = await api.post<CheckInResponse>('/api/auto/check-in', data);
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 403 && error?.response?.data?.error === 'STUDENT_NOT_REGISTERED') {
+      throw new Error(error.response.data.message || 'Student ID not registered. Please contact your instructor.');
+    }
+    throw error;
+  }
 };
 
 export const getStudentCheckIns = async (studentId: string): Promise<StudentCheckIn[]> => {
@@ -676,11 +683,18 @@ export const getRandomQuizQuestions = async (
 };
 
 export const submitQuizAnswer = async (data: QuizSubmissionRequest): Promise<QuizSubmissionResponse['data']> => {
-  const response = await api.post<QuizSubmissionResponse>('/api/quiz/submit-answer', data);
-  if (!response.data.success) {
-    throw new Error('Failed to submit quiz answer');
+  try {
+    const response = await api.post<QuizSubmissionResponse>('/api/quiz/submit-answer', data);
+    if (!response.data.success) {
+      throw new Error('Failed to submit quiz answer');
+    }
+    return response.data.data;
+  } catch (error: any) {
+    if (error?.response?.status === 403 && error?.response?.data?.error === 'STUDENT_NOT_REGISTERED') {
+      throw new Error(error.response.data.message || 'Student ID not registered. Please contact your instructor.');
+    }
+    throw error;
   }
-  return response.data.data;
 };
 
 export const getStudentQuizScores = async (studentId: string): Promise<StudentQuizScoresResponse['data']> => {
@@ -757,10 +771,14 @@ export interface AllQuestionsResponse {
 
 export const checkStudentExists = async (studentId: string): Promise<boolean> => {
   try {
-    const response = await api.get<StudentQuizScoresResponse>(`/api/quiz/student/${studentId}/scores`);
+    // Try a lightweight check by fetching student's check-in history
+    const response = await api.get(`/api/auto/check-ins/${studentId}`);
     return response.data.success;
   } catch (error: any) {
     if (error?.response?.status === 404) {
+      return false;
+    }
+    if (error?.response?.status === 403 && error?.response?.data?.error === 'STUDENT_NOT_REGISTERED') {
       return false;
     }
     // For other errors, assume student might exist but there's a different issue

@@ -26,30 +26,14 @@ router.post('/auto/check-in', async (req: Request, res: Response) => {
       .eq('student_id', student_id)
       .single();
 
-    // If student doesn't exist, create them automatically
+    // If student doesn't exist, prevent new signups
     if (studentError || !student) {
-      console.log(`🆕 Auto-registering new student: ${student_id}`);
-      
-      const { data: newStudent, error: createError } = await supabaseAdmin
-        .from('students')
-        .insert({
-          student_id: student_id,
-          full_name: full_name || `Student ${student_id}`
-        })
-        .select('id, student_id, full_name')
-        .single();
-
-      if (createError || !newStudent) {
-        console.error('Failed to create student:', createError);
-        return res.status(500).json({
-          success: false,
-          error: 'STUDENT_CREATION_FAILED',
-          message: 'Failed to create student record'
-        });
-      }
-
-      student = newStudent;
-      console.log(`✅ Student created: ${student.student_id} (${student.id})`);
+      console.log(`❌ Unknown student attempted check-in: ${student_id}`);
+      return res.status(403).json({
+        success: false,
+        error: 'STUDENT_NOT_REGISTERED',
+        message: `Student ID '${student_id}' is not registered. Please contact your instructor.`
+      });
     }
 
     // Create check-in record
@@ -80,8 +64,7 @@ router.post('/auto/check-in', async (req: Request, res: Response) => {
         check_in_id: checkIn.id,
         student_id: student.student_id,
         student_name: student.full_name,
-        checked_in_at: checkIn.created_at,
-        is_new_student: studentError ? true : false
+        checked_in_at: checkIn.created_at
       },
       message: `Check-in recorded for ${student.full_name || student.student_id}`
     });

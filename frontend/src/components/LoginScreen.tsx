@@ -3,36 +3,23 @@ import { useAuth } from '../contexts/AuthContext';
 
 const LoginScreen: React.FC = () => {
   const [studentId, setStudentId] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const { login } = useAuth();
+  const { login, loginError, isLoggingIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!studentId.trim()) {
-      setError('Student ID is required');
       return;
     }
 
-    setIsLoading(true);
-    setError('');
-
-    try {
-      // Simple validation - just ensure it's not empty
-      const trimmedStudentId = studentId.trim().toUpperCase();
-      
-      // Basic format validation (optional)
-      if (trimmedStudentId.length < 3) {
-        throw new Error('Student ID must be at least 3 characters long');
-      }
-
-      login(trimmedStudentId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid student ID');
-    } finally {
-      setIsLoading(false);
+    const trimmedStudentId = studentId.trim().toUpperCase();
+    
+    // Basic format validation (optional)
+    if (trimmedStudentId.length < 3) {
+      return;
     }
+
+    await login(trimmedStudentId);
   };
 
   return (
@@ -60,27 +47,46 @@ const LoginScreen: React.FC = () => {
                 value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}
                 placeholder="Enter your student ID (e.g., STUDENT2025)"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-lg"
-                disabled={isLoading}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-lg ${
+                  loginError ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                }`}
+                disabled={isLoggingIn}
                 autoFocus
               />
-              {error && (
-                <p className="mt-2 text-sm text-red-600 flex items-center">
-                  <i className="fas fa-exclamation-circle mr-2"></i>
-                  {error}
+              {loginError && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-700 flex items-center">
+                    <i className="fas fa-exclamation-triangle mr-2"></i>
+                    {loginError}
+                  </p>
+                </div>
+              )}
+              
+              {/* Show validation hint for empty or too short input */}
+              {studentId.trim() && studentId.trim().length < 3 && (
+                <p className="mt-2 text-sm text-orange-600 flex items-center">
+                  <i className="fas fa-info-circle mr-2"></i>
+                  Student ID must be at least 3 characters long
+                </p>
+              )}
+              
+              {!studentId.trim() && (
+                <p className="mt-2 text-sm text-gray-500 flex items-center">
+                  <i className="fas fa-info-circle mr-2"></i>
+                  Please enter your Student ID
                 </p>
               )}
             </div>
 
             <button
               type="submit"
-              disabled={isLoading || !studentId.trim()}
+              disabled={isLoggingIn || !studentId.trim() || studentId.trim().length < 3}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-semibold text-lg hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
-              {isLoading ? (
+              {isLoggingIn ? (
                 <div className="flex items-center justify-center">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Signing in...
+                  Validating...
                 </div>
               ) : (
                 'Sign In'
@@ -91,7 +97,17 @@ const LoginScreen: React.FC = () => {
           {/* Additional Info */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Don't have a Student ID? Contact your instructor.
+              {loginError ? (
+                <span className="text-red-600">
+                  <i className="fas fa-user-times mr-1"></i>
+                  Student ID not found? Contact your instructor to get registered.
+                </span>
+              ) : (
+                <>
+                  <i className="fas fa-question-circle mr-1"></i>
+                  Don't have a Student ID? Contact your instructor.
+                </>
+              )}
             </p>
           </div>
         </div>

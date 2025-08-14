@@ -19,49 +19,20 @@ router.post('/simple/check-in', async (req: Request, res: Response) => {
       });
     }
 
-    // Look up or create student profile
-    let { data: profile, error } = await supabaseAdmin
-      .from('student_profiles')
+    // Check if student is registered (no auto-registration)
+    const { data: profile, error } = await supabaseAdmin
+      .from('students')
       .select('id, student_id')
       .eq('student_id', student_id)
       .single();
 
     if (error || !profile) {
-      // Student doesn't exist, create auth user first
-      const email = `${student_id}@school.local`;
-      const password = `temp_${student_id}_${Date.now()}`;
-
-      const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email,
-        password,
-        user_metadata: { student_id },
-        email_confirm: true
+      // Student doesn't exist - prevent new signups
+      return res.status(403).json({
+        success: false,
+        error: 'STUDENT_NOT_REGISTERED',
+        message: `Student ID '${student_id}' is not registered. Please contact your instructor.`
       });
-
-      if (authError || !authUser.user) {
-        return res.status(500).json({
-          success: false,
-          error: 'REGISTRATION_FAILED',
-          message: 'Failed to register student'
-        });
-      }
-
-      // The profile should be auto-created by trigger, let's fetch it
-      const { data: newProfile } = await supabaseAdmin
-        .from('student_profiles')
-        .select('id, student_id')
-        .eq('id', authUser.user.id)
-        .single();
-
-      if (!newProfile) {
-        return res.status(500).json({
-          success: false,
-          error: 'PROFILE_CREATION_FAILED',
-          message: 'Failed to create student profile'
-        });
-      }
-
-      profile = newProfile;
     }
 
     // No cooldown - students can check-in anytime
@@ -123,7 +94,7 @@ router.post('/simple/check-ins', async (req: Request, res: Response) => {
 
     // Look up student
     const { data: profile, error } = await supabaseAdmin
-      .from('student_profiles')
+      .from('students')
       .select('id, student_id')
       .eq('student_id', student_id)
       .single();
