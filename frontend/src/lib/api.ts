@@ -67,6 +67,14 @@ export const getAllStudents = async (): Promise<Student[]> => {
   return response.data.data.students;
 };
 
+export const getStudent = async (studentId: string): Promise<Student> => {
+  const response = await api.get<{success: boolean, data: {student: Student}}>(`/api/auto/students/${studentId}`);
+  if (!response.data.success || !response.data.data.student) {
+    throw new Error('Failed to fetch student information');
+  }
+  return response.data.data.student;
+};
+
 export const checkInStudent = async (data: CheckInRequest): Promise<CheckInResponse> => {
   try {
     const response = await api.post<CheckInResponse>('/api/auto/check-in', data);

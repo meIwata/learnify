@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { checkStudentExists } from '../lib/api';
+import { checkStudentExists, getStudent } from '../lib/api';
 
 interface AuthContextType {
   studentId: string | null;
@@ -71,19 +71,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       
       // Fetch student information from the backend
-      const response = await fetch(`/api/auto/students/${trimmedStudentId}`);
-      if (!response.ok) {
-        if (response.status === 403) {
-          const errorData = await response.json();
-          if (errorData.error === 'STUDENT_NOT_REGISTERED') {
-            throw new Error(errorData.message || 'Student ID not registered. Please contact your instructor.');
-          }
-        }
-        throw new Error('Failed to fetch student information');
-      }
-      
-      const studentData = await response.json();
-      const studentName = studentData.data.student.full_name;
+      const student = await getStudent(trimmedStudentId);
+      const studentName = student.full_name;
 
       // If validation passes, set authentication
       setStudentId(trimmedStudentId);
