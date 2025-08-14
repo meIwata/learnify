@@ -500,7 +500,13 @@ const AdminPage: React.FC = () => {
                     <div className="ml-3">
                       <p className="text-sm text-yellow-700">
                         <strong>Quiz Score Issue:</strong> The system previously allowed students to earn points multiple times for the same question. 
-                        This fix will recalculate scores so each question only awards points once (5 points per question, max 100 points total).
+                        This fix will recalculate scores so each question only awards points once (5 points per question).
+                        {fixScoreResult && (
+                          <span className="font-medium">
+                            {' '}Max possible: {fixScoreResult.data.quiz_system_info.max_possible_points} points 
+                            ({fixScoreResult.data.quiz_system_info.total_active_questions} questions).
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -618,18 +624,37 @@ const AdminPage: React.FC = () => {
                   <div>
                     <h3 className="text-sm font-medium text-gray-900 mb-2">Quiz System</h3>
                     <div className="text-sm text-gray-600">
-                      <div className="flex justify-between py-1">
-                        <span>Total Questions:</span>
-                        <span>25 (SwiftUI)</span>
-                      </div>
-                      <div className="flex justify-between py-1">
-                        <span>Max Points:</span>
-                        <span>125 (5 per question)</span>
-                      </div>
-                      <div className="flex justify-between py-1">
-                        <span>Expected Max:</span>
-                        <span>100 (20 unique questions)</span>
-                      </div>
+                      {fixScoreResult ? (
+                        <>
+                          <div className="flex justify-between py-1">
+                            <span>Active Questions:</span>
+                            <span>{fixScoreResult.data.quiz_system_info.total_active_questions}</span>
+                          </div>
+                          <div className="flex justify-between py-1">
+                            <span>Points per Question:</span>
+                            <span>{fixScoreResult.data.quiz_system_info.points_per_question}</span>
+                          </div>
+                          <div className="flex justify-between py-1">
+                            <span>Max Possible Points:</span>
+                            <span className="font-semibold text-green-600">{fixScoreResult.data.quiz_system_info.max_possible_points}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex justify-between py-1">
+                            <span>Active Questions:</span>
+                            <span>Run fix to see current count</span>
+                          </div>
+                          <div className="flex justify-between py-1">
+                            <span>Points per Question:</span>
+                            <span>5</span>
+                          </div>
+                          <div className="flex justify-between py-1">
+                            <span>Max Possible Points:</span>
+                            <span>Dynamic (based on question count)</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

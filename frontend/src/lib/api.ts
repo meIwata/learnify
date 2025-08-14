@@ -997,6 +997,11 @@ export interface QuizScoreFixResponse {
   data: {
     students_processed: number;
     total_points_corrected: number;
+    quiz_system_info: {
+      total_active_questions: number;
+      points_per_question: number;
+      max_possible_points: number;
+    };
     details: Array<{
       student_id: string;
       old_points: number;

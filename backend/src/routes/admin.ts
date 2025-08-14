@@ -136,7 +136,20 @@ router.post('/fix-quiz-scores', requireAdmin, async (req: AdminRequest, res) => 
   try {
     console.log(`Admin ${req.adminStudentId} requested quiz score fix`);
 
-    // Step 1: Get all students who have quiz attempts
+    // Step 1: Get the total number of active questions to calculate max possible points
+    const { count: totalQuestions, error: questionsError } = await supabase
+      .from('quiz_questions')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_active', true);
+
+    if (questionsError) {
+      throw questionsError;
+    }
+
+    const maxPossiblePoints = (totalQuestions || 0) * 5;
+    console.log(`Total active questions: ${totalQuestions}, Max possible points: ${maxPossiblePoints}`);
+
+    // Step 2: Get all students who have quiz attempts
     const { data: allAttempts, error: studentsError } = await supabase
       .from('student_quiz_attempts')
       .select('student_id, student_uuid');
@@ -283,6 +296,11 @@ router.post('/fix-quiz-scores', requireAdmin, async (req: AdminRequest, res) => 
       data: {
         students_processed: totalStudentsProcessed,
         total_points_corrected: totalPointsCorrected,
+        quiz_system_info: {
+          total_active_questions: totalQuestions,
+          points_per_question: 5,
+          max_possible_points: maxPossiblePoints
+        },
         details: results
       }
     });
