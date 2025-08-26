@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getAdminStatus, getAllStudentsAsAdmin, deleteStudent, getAllLessons as getAllLessonsAPI, updateLessonStatus, fixQuizScores } from '../lib/api';
-import type { Student, AdminStatus, Lesson, QuizScoreFixResponse } from '../lib/api';
+import { getAdminStatus, getAllStudentsAsAdmin, deleteStudent, getAllLessons as getAllLessonsAPI, updateLessonStatus, fixQuizScores, calculateBonusPoints } from '../lib/api';
+import type { Student, AdminStatus, Lesson, QuizScoreFixResponse, BonusCalculationResponse } from '../lib/api';
 
 const AdminPage: React.FC = () => {
   const { studentId } = useAuth();
@@ -17,6 +17,11 @@ const AdminPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'students' | 'lessons' | 'system'>('students');
   const [fixScoreLoading, setFixScoreLoading] = useState(false);
   const [fixScoreResult, setFixScoreResult] = useState<QuizScoreFixResponse | null>(null);
+  const [bonusLoading, setBonusLoading] = useState<'midterm' | 'final' | null>(null);
+  const [bonusResults, setBonusResults] = useState<{
+    midterm?: BonusCalculationResponse;
+    final?: BonusCalculationResponse;
+  }>({});
 
   useEffect(() => {
     if (!studentId) return;
@@ -104,6 +109,23 @@ const AdminPage: React.FC = () => {
       alert(`❌ ${error.message}`);
     } finally {
       setFixScoreLoading(false);
+    }
+  };
+
+  const handleCalculateBonus = async (projectType: 'midterm' | 'final') => {
+    if (!window.confirm(`Calculate bonus points for the most voted ${projectType} project? This will award 50 bonus points to the winning project.`)) {
+      return;
+    }
+
+    try {
+      setBonusLoading(projectType);
+      const result = await calculateBonusPoints(projectType);
+      setBonusResults(prev => ({ ...prev, [projectType]: result }));
+      alert(`✅ ${result.message}`);
+    } catch (error: any) {
+      alert(`❌ ${error.message}`);
+    } finally {
+      setBonusLoading(null);
     }
   };
 
@@ -594,7 +616,105 @@ const AdminPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Future System Tools */}
+            {/* Project Voting Bonus Section */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="p-6 border-b border-gray-100">
+                <h2 className="text-lg font-semibold text-gray-900">Project Voting Bonus</h2>
+                <p className="text-sm text-gray-600 mt-1">Award bonus points to most voted projects</p>
+              </div>
+
+              <div className="p-6">
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <i className="fas fa-info-circle text-blue-400"></i>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-blue-700">
+                        <strong>Bonus Point System:</strong> Award 50 bonus points to the project with the most votes. 
+                        This action counts all votes (no date restrictions) and can only be done once per project.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Midterm Projects */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-gray-900">Midterm Projects</h3>
+                    <button
+                      onClick={() => handleCalculateBonus('midterm')}
+                      disabled={bonusLoading === 'midterm'}
+                      className="w-full bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-colors"
+                    >
+                      {bonusLoading === 'midterm' ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          <span>Calculating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-trophy"></i>
+                          <span>Award Midterm Bonus</span>
+                        </>
+                      )}
+                    </button>
+                    
+                    {bonusResults.midterm && (
+                      <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+                        <i className="fas fa-check-circle text-green-600 mr-1"></i>
+                        {bonusResults.midterm.message}
+                        {bonusResults.midterm.data && (
+                          <div className="mt-2 text-xs">
+                            Submission ID: {bonusResults.midterm.data.submission_id} • 
+                            Votes: {bonusResults.midterm.data.vote_count} • 
+                            Bonus: {bonusResults.midterm.data.bonus_awarded} points
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Final Projects */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-gray-900">Final Projects</h3>
+                    <button
+                      onClick={() => handleCalculateBonus('final')}
+                      disabled={bonusLoading === 'final'}
+                      className="w-full bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-colors"
+                    >
+                      {bonusLoading === 'final' ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          <span>Calculating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-trophy"></i>
+                          <span>Award Final Bonus</span>
+                        </>
+                      )}
+                    </button>
+                    
+                    {bonusResults.final && (
+                      <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+                        <i className="fas fa-check-circle text-green-600 mr-1"></i>
+                        {bonusResults.final.message}
+                        {bonusResults.final.data && (
+                          <div className="mt-2 text-xs">
+                            Submission ID: {bonusResults.final.data.submission_id} • 
+                            Votes: {bonusResults.final.data.vote_count} • 
+                            Bonus: {bonusResults.final.data.bonus_awarded} points
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* System Information */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="p-6 border-b border-gray-100">
                 <h2 className="text-lg font-semibold text-gray-900">System Information</h2>

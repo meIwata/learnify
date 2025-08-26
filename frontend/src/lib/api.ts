@@ -983,7 +983,7 @@ export interface BonusCalculationResponse {
 }
 
 export const calculateBonusPoints = async (projectType: 'midterm' | 'final'): Promise<BonusCalculationResponse> => {
-  const response = await api.post<BonusCalculationResponse>(`/api/leaderboard/calculate-bonus/${projectType}`);
+  const response = await api.post<BonusCalculationResponse>(`/api/calculate-bonus/${projectType}`);
   if (!response.data.success) {
     throw new Error(response.data.message || 'Failed to calculate bonus points');
   }
