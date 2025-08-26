@@ -24,12 +24,6 @@ const Leaderboard: React.FC = () => {
 
   useEffect(() => {
     fetchLeaderboard();
-
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchLeaderboard, 30000);
-
-    // Cleanup interval on unmount
-    return () => clearInterval(interval);
   }, []);
 
   const getInitials = (name: string): string => {
