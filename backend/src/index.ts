@@ -18,6 +18,7 @@ import submissionsRouter from './routes/submissions';
 import projectNotesRouter from './routes/projectNotes';
 import quizRouter from './routes/quiz';
 import votingRouter from './routes/voting';
+import feedbackRouter from './routes/feedback';
 import { config } from './config/supabase';
 
 // Load environment variables
@@ -69,6 +70,7 @@ app.use('/api/submissions', submissionsRouter);
 app.use('/api/project-notes', projectNotesRouter);
 app.use('/api/quiz', quizRouter);
 app.use('/api/voting', votingRouter);
+app.use('/api/feedback', feedbackRouter);
 
 // Root endpoint
 app.get('/', (req: Request, res: Response) => {

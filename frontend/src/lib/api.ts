@@ -1028,4 +1028,122 @@ export const fixQuizScores = async (adminStudentId: string): Promise<QuizScoreFi
   return response.data;
 };
 
+// Feedback System API
+
+export interface FeedbackTopic {
+  id: string;
+  category: 'current' | 'improvement' | 'future';
+  topic_name: string;
+  description?: string;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+}
+
+export interface FeedbackTopicsResponse {
+  success: boolean;
+  data: {
+    topics: {
+      current: FeedbackTopic[];
+      improvement: FeedbackTopic[];
+      future: FeedbackTopic[];
+    };
+    total: number;
+  };
+}
+
+export interface StudentFeedback {
+  id: string;
+  student_id: string;
+  student_uuid: string;
+  semester_feedback?: string;
+  overall_rating?: number;
+  liked_topics: string[];
+  improvement_topics: string[];
+  future_topics: string[];
+  additional_comments?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FeedbackSubmissionRequest {
+  semester_feedback?: string;
+  overall_rating?: number;
+  liked_topics: string[];
+  improvement_topics: string[];
+  future_topics: string[];
+  additional_comments?: string;
+}
+
+export interface FeedbackSubmissionResponse {
+  success: boolean;
+  data: {
+    feedback: StudentFeedback;
+    message: string;
+  };
+}
+
+export interface MyFeedbackResponse {
+  success: boolean;
+  data: {
+    feedback: StudentFeedback | null;
+    has_submitted: boolean;
+  };
+}
+
+export interface FeedbackAnalytics {
+  total_responses: number;
+  average_rating: number;
+  rating_distribution: { [key: number]: number };
+  popular_liked_topics: { [key: string]: number };
+  popular_improvement_topics: { [key: string]: number };
+  popular_future_topics: { [key: string]: number };
+}
+
+export interface FeedbackAnalyticsResponse {
+  success: boolean;
+  data: FeedbackAnalytics;
+}
+
+// Get all feedback topics for form options
+export const getFeedbackTopics = async (): Promise<FeedbackTopicsResponse> => {
+  const response = await api.get<FeedbackTopicsResponse>('/api/feedback/topics');
+  return response.data;
+};
+
+// Submit or update student feedback
+export const submitFeedback = async (
+  studentId: string, 
+  feedback: FeedbackSubmissionRequest
+): Promise<FeedbackSubmissionResponse> => {
+  const response = await api.post<FeedbackSubmissionResponse>('/api/feedback/submit', feedback, {
+    headers: { 'x-student-id': studentId }
+  });
+  return response.data;
+};
+
+// Get current student's feedback
+export const getMyFeedback = async (studentId: string): Promise<MyFeedbackResponse> => {
+  const response = await api.get<MyFeedbackResponse>('/api/feedback/my-feedback', {
+    headers: { 'x-student-id': studentId }
+  });
+  return response.data;
+};
+
+// Admin: Get all feedback
+export const getAllFeedback = async (adminStudentId: string) => {
+  const response = await api.get('/api/feedback/all', {
+    headers: { 'x-student-id': adminStudentId }
+  });
+  return response.data;
+};
+
+// Admin: Get feedback analytics
+export const getFeedbackAnalytics = async (adminStudentId: string): Promise<FeedbackAnalyticsResponse> => {
+  const response = await api.get<FeedbackAnalyticsResponse>('/api/feedback/analytics', {
+    headers: { 'x-student-id': adminStudentId }
+  });
+  return response.data;
+};
+
 export default api;
