@@ -118,9 +118,9 @@ router.post('/submit', requireAuth, async (req: FeedbackRequest, res: Response) 
         .update({
           semester_feedback,
           overall_rating,
-          liked_topics: JSON.stringify(liked_topics || []),
-          improvement_topics: JSON.stringify(improvement_topics || []),
-          future_topics: JSON.stringify(future_topics || []),
+          liked_topics: liked_topics || [],
+          improvement_topics: improvement_topics || [],
+          future_topics: future_topics || [],
           additional_comments,
           updated_at: new Date().toISOString()
         })
@@ -148,9 +148,9 @@ router.post('/submit', requireAuth, async (req: FeedbackRequest, res: Response) 
           student_uuid: req.studentUuid,
           semester_feedback,
           overall_rating,
-          liked_topics: JSON.stringify(liked_topics || []),
-          improvement_topics: JSON.stringify(improvement_topics || []),
-          future_topics: JSON.stringify(future_topics || []),
+          liked_topics: liked_topics || [],
+          improvement_topics: improvement_topics || [],
+          future_topics: future_topics || [],
           additional_comments
         })
         .select()
@@ -214,7 +214,7 @@ router.get('/all', requireAuth, async (req: FeedbackRequest, res: Response) => {
       .from('student_feedback')
       .select(`
         *,
-        students!inner(student_id, full_name)
+        students!student_feedback_student_id_fkey(student_id, full_name)
       `)
       .order('created_at', { ascending: false });
 
@@ -222,19 +222,8 @@ router.get('/all', requireAuth, async (req: FeedbackRequest, res: Response) => {
       throw error;
     }
 
-    // Parse JSON fields for easier consumption
-    const processedFeedback = allFeedback.map(feedback => ({
-      ...feedback,
-      liked_topics: typeof feedback.liked_topics === 'string' 
-        ? JSON.parse(feedback.liked_topics) 
-        : feedback.liked_topics,
-      improvement_topics: typeof feedback.improvement_topics === 'string'
-        ? JSON.parse(feedback.improvement_topics)
-        : feedback.improvement_topics,
-      future_topics: typeof feedback.future_topics === 'string'
-        ? JSON.parse(feedback.future_topics)
-        : feedback.future_topics
-    }));
+    // JSONB fields should already be arrays, no need to parse
+    const processedFeedback = allFeedback;
 
     res.json({
       success: true,
@@ -286,9 +275,8 @@ router.get('/analytics', requireAuth, async (req: FeedbackRequest, res: Response
 
         // Count topic mentions
         const countTopics = (topics: any, targetObj: Record<string, number>) => {
-          const topicArray = typeof topics === 'string' ? JSON.parse(topics) : topics;
-          if (Array.isArray(topicArray)) {
-            topicArray.forEach((topic: string) => {
+          if (Array.isArray(topics)) {
+            topics.forEach((topic: string) => {
               targetObj[topic] = (targetObj[topic] || 0) + 1;
             });
           }
@@ -300,9 +288,23 @@ router.get('/analytics', requireAuth, async (req: FeedbackRequest, res: Response
       });
     }
 
+    // Convert topic objects to arrays for frontend consumption
+    const formattedAnalytics = {
+      ...analytics,
+      popular_liked_topics: Object.entries(analytics.popular_liked_topics)
+        .map(([topic, count]) => ({ topic, count }))
+        .sort((a, b) => b.count - a.count),
+      popular_improvement_topics: Object.entries(analytics.popular_improvement_topics)
+        .map(([topic, count]) => ({ topic, count }))
+        .sort((a, b) => b.count - a.count),
+      popular_future_topics: Object.entries(analytics.popular_future_topics)
+        .map(([topic, count]) => ({ topic, count }))
+        .sort((a, b) => b.count - a.count)
+    };
+
     res.json({
       success: true,
-      data: analytics
+      data: formattedAnalytics
     });
   } catch (error: any) {
     console.error('Error fetching feedback analytics:', error);

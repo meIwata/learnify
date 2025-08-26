@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getAdminStatus, getAllStudentsAsAdmin, deleteStudent, getAllLessons as getAllLessonsAPI, updateLessonStatus, fixQuizScores, calculateBonusPoints } from '../lib/api';
-import type { Student, AdminStatus, Lesson, QuizScoreFixResponse, BonusCalculationResponse } from '../lib/api';
+import { getAdminStatus, getAllStudentsAsAdmin, deleteStudent, getAllLessons as getAllLessonsAPI, updateLessonStatus, fixQuizScores, calculateBonusPoints, getFeedbackAnalytics, getAllFeedback } from '../lib/api';
+import type { Student, AdminStatus, Lesson, QuizScoreFixResponse, BonusCalculationResponse, FeedbackAnalytics, StudentFeedback } from '../lib/api';
 
 const AdminPage: React.FC = () => {
   const { studentId } = useAuth();
@@ -14,7 +14,7 @@ const AdminPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [statusUpdateLoading, setStatusUpdateLoading] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'students' | 'lessons' | 'system'>('students');
+  const [activeTab, setActiveTab] = useState<'students' | 'lessons' | 'system' | 'feedback'>('students');
   const [fixScoreLoading, setFixScoreLoading] = useState(false);
   const [fixScoreResult, setFixScoreResult] = useState<QuizScoreFixResponse | null>(null);
   const [bonusLoading, setBonusLoading] = useState<'midterm' | 'final' | null>(null);
@@ -22,6 +22,9 @@ const AdminPage: React.FC = () => {
     midterm?: BonusCalculationResponse;
     final?: BonusCalculationResponse;
   }>({});
+  const [feedbackAnalytics, setFeedbackAnalytics] = useState<FeedbackAnalytics | null>(null);
+  const [allFeedback, setAllFeedback] = useState<StudentFeedback[]>([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
 
   useEffect(() => {
     if (!studentId) return;
@@ -51,6 +54,32 @@ const AdminPage: React.FC = () => {
 
     fetchAdminData();
   }, [studentId]);
+
+  // Load feedback data when feedback tab is selected
+  useEffect(() => {
+    if (!studentId || activeTab !== 'feedback') return;
+
+    const loadFeedbackData = async () => {
+      try {
+        setFeedbackLoading(true);
+        
+        // Load feedback analytics
+        const analyticsResponse = await getFeedbackAnalytics(studentId);
+        setFeedbackAnalytics(analyticsResponse.data);
+        
+        // Load all feedback
+        const feedbackResponse = await getAllFeedback(studentId);
+        setAllFeedback(feedbackResponse.data.feedback);
+      } catch (error: any) {
+        console.error('Error loading feedback data:', error);
+        setError(error.message || 'Failed to load feedback data');
+      } finally {
+        setFeedbackLoading(false);
+      }
+    };
+
+    loadFeedbackData();
+  }, [studentId, activeTab]);
 
   const handleDeleteStudent = async (targetStudentId: string) => {
     if (!studentId || !window.confirm(`Are you sure you want to delete student ${targetStudentId}? This action cannot be undone.`)) {
@@ -291,6 +320,17 @@ const AdminPage: React.FC = () => {
               >
                 <i className="fas fa-cogs mr-2"></i>
                 System
+              </button>
+              <button
+                onClick={() => setActiveTab('feedback')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'feedback'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <i className="fas fa-comments mr-2"></i>
+                Feedback
               </button>
             </nav>
           </div>
@@ -824,6 +864,424 @@ const AdminPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Feedback Tab */}
+        {activeTab === 'feedback' && (
+          <div className="space-y-6">
+            {/* Feedback Overview Section */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="p-6 border-b border-gray-100">
+                <h2 className="text-lg font-semibold text-gray-900">Feedback Analytics</h2>
+                <p className="text-sm text-gray-600 mt-1">Student feedback statistics and insights</p>
+              </div>
+
+              <div className="p-6">
+                {feedbackLoading ? (
+                  <div className="text-center py-8">
+                    <div className="text-gray-500">Loading feedback data...</div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Summary Stats */}
+                    {feedbackAnalytics && (
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-blue-600">
+                            {feedbackAnalytics.total_responses}
+                          </div>
+                          <div className="text-sm text-blue-700">Total Responses</div>
+                        </div>
+                        <div className="bg-green-50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-green-600">
+                            {feedbackAnalytics.average_rating ? feedbackAnalytics.average_rating.toFixed(1) : 'N/A'}
+                          </div>
+                          <div className="text-sm text-green-700">Average Rating</div>
+                        </div>
+                        <div className="bg-yellow-50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-yellow-600">
+                            {feedbackAnalytics.response_rate ? Math.round(feedbackAnalytics.response_rate) : 0}%
+                          </div>
+                          <div className="text-sm text-yellow-700">Response Rate</div>
+                        </div>
+                        <div className="bg-purple-50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-purple-600">
+                            {feedbackAnalytics.improvement_suggestions || 0}
+                          </div>
+                          <div className="text-sm text-purple-700">Improvement Topics</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Rating Distribution */}
+                    {feedbackAnalytics && feedbackAnalytics.rating_distribution && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Rating Distribution</h3>
+                        <div className="space-y-3">
+                          {[5, 4, 3, 2, 1].map((rating) => {
+                            const count = feedbackAnalytics.rating_distribution[rating] || 0;
+                            const percentage = feedbackAnalytics.total_responses > 0 
+                              ? Math.round((count / feedbackAnalytics.total_responses) * 100) 
+                              : 0;
+                            return (
+                              <div key={rating} className="flex items-center">
+                                <div className="w-20 text-sm text-gray-600">
+                                  {rating} Star{rating !== 1 ? 's' : ''}
+                                </div>
+                                <div className="flex-1 mx-3 bg-gray-200 rounded-full h-4">
+                                  <div
+                                    className="h-4 rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400"
+                                    style={{ width: `${percentage}%` }}
+                                  ></div>
+                                </div>
+                                <div className="w-16 text-sm text-gray-600">
+                                  {count} ({percentage}%)
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Popular Topics */}
+                    {feedbackAnalytics && feedbackAnalytics.popular_liked_topics && feedbackAnalytics.popular_liked_topics.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Most Liked Topics</h3>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          {/* Pie Chart */}
+                          <div className="flex justify-center">
+                            <div className="relative w-64 h-64">
+                              {(() => {
+                                const total = feedbackAnalytics.popular_liked_topics.reduce((sum, topic) => sum + topic.count, 0);
+                                const colors = ['#10B981', '#059669', '#047857', '#065F46', '#064E3B', '#022C22'];
+                                let currentAngle = 0;
+                                
+                                return (
+                                  <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                                    {feedbackAnalytics.popular_liked_topics.slice(0, 6).map((topic, index) => {
+                                      const percentage = (topic.count / total) * 100;
+                                      const angle = (topic.count / total) * 360;
+                                      const x1 = 50 + 45 * Math.cos((currentAngle - 90) * Math.PI / 180);
+                                      const y1 = 50 + 45 * Math.sin((currentAngle - 90) * Math.PI / 180);
+                                      const x2 = 50 + 45 * Math.cos((currentAngle + angle - 90) * Math.PI / 180);
+                                      const y2 = 50 + 45 * Math.sin((currentAngle + angle - 90) * Math.PI / 180);
+                                      
+                                      const largeArc = angle > 180 ? 1 : 0;
+                                      const pathData = `M 50 50 L ${x1} ${y1} A 45 45 0 ${largeArc} 1 ${x2} ${y2} Z`;
+                                      
+                                      const result = (
+                                        <path
+                                          key={index}
+                                          d={pathData}
+                                          fill={colors[index % colors.length]}
+                                          stroke="white"
+                                          strokeWidth="0.5"
+                                        />
+                                      );
+                                      
+                                      currentAngle += angle;
+                                      return result;
+                                    })}
+                                  </svg>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                          
+                          {/* Legend and Data */}
+                          <div className="space-y-3">
+                            {feedbackAnalytics.popular_liked_topics.slice(0, 6).map((topic, index) => {
+                              const total = feedbackAnalytics.popular_liked_topics.reduce((sum, t) => sum + t.count, 0);
+                              const percentage = Math.round((topic.count / total) * 100);
+                              const colors = ['#10B981', '#059669', '#047857', '#065F46', '#064E3B', '#022C22'];
+                              
+                              return (
+                                <div key={index} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                                  <div className="flex items-center space-x-3">
+                                    <div 
+                                      className="w-4 h-4 rounded-full" 
+                                      style={{ backgroundColor: colors[index % colors.length] }}
+                                    ></div>
+                                    <span className="font-medium text-green-800">{topic.topic}</span>
+                                  </div>
+                                  <div className="text-sm text-green-600">
+                                    {topic.count} votes ({percentage}%)
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Improvement Areas */}
+                    {feedbackAnalytics && feedbackAnalytics.popular_improvement_topics && feedbackAnalytics.popular_improvement_topics.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Areas for Improvement</h3>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          {/* Pie Chart */}
+                          <div className="flex justify-center">
+                            <div className="relative w-64 h-64">
+                              {(() => {
+                                const total = feedbackAnalytics.popular_improvement_topics.reduce((sum, topic) => sum + topic.count, 0);
+                                const colors = ['#F59E0B', '#D97706', '#B45309', '#92400E', '#78350F', '#451A03'];
+                                let currentAngle = 0;
+                                
+                                return (
+                                  <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                                    {feedbackAnalytics.popular_improvement_topics.slice(0, 6).map((topic, index) => {
+                                      const percentage = (topic.count / total) * 100;
+                                      const angle = (topic.count / total) * 360;
+                                      const x1 = 50 + 45 * Math.cos((currentAngle - 90) * Math.PI / 180);
+                                      const y1 = 50 + 45 * Math.sin((currentAngle - 90) * Math.PI / 180);
+                                      const x2 = 50 + 45 * Math.cos((currentAngle + angle - 90) * Math.PI / 180);
+                                      const y2 = 50 + 45 * Math.sin((currentAngle + angle - 90) * Math.PI / 180);
+                                      
+                                      const largeArc = angle > 180 ? 1 : 0;
+                                      const pathData = `M 50 50 L ${x1} ${y1} A 45 45 0 ${largeArc} 1 ${x2} ${y2} Z`;
+                                      
+                                      const result = (
+                                        <path
+                                          key={index}
+                                          d={pathData}
+                                          fill={colors[index % colors.length]}
+                                          stroke="white"
+                                          strokeWidth="0.5"
+                                        />
+                                      );
+                                      
+                                      currentAngle += angle;
+                                      return result;
+                                    })}
+                                  </svg>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                          
+                          {/* Legend and Data */}
+                          <div className="space-y-3">
+                            {feedbackAnalytics.popular_improvement_topics.slice(0, 6).map((topic, index) => {
+                              const total = feedbackAnalytics.popular_improvement_topics.reduce((sum, t) => sum + t.count, 0);
+                              const percentage = Math.round((topic.count / total) * 100);
+                              const colors = ['#F59E0B', '#D97706', '#B45309', '#92400E', '#78350F', '#451A03'];
+                              
+                              return (
+                                <div key={index} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                                  <div className="flex items-center space-x-3">
+                                    <div 
+                                      className="w-4 h-4 rounded-full" 
+                                      style={{ backgroundColor: colors[index % colors.length] }}
+                                    ></div>
+                                    <span className="font-medium text-orange-800">{topic.topic}</span>
+                                  </div>
+                                  <div className="text-sm text-orange-600">
+                                    {topic.count} votes ({percentage}%)
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Future Interests */}
+                    {feedbackAnalytics && feedbackAnalytics.popular_future_topics && feedbackAnalytics.popular_future_topics.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Future Learning Interests</h3>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          {/* Pie Chart */}
+                          <div className="flex justify-center">
+                            <div className="relative w-64 h-64">
+                              {(() => {
+                                const total = feedbackAnalytics.popular_future_topics.reduce((sum, topic) => sum + topic.count, 0);
+                                const colors = ['#3B82F6', '#2563EB', '#1D4ED8', '#1E40AF', '#1E3A8A', '#172554'];
+                                let currentAngle = 0;
+                                
+                                return (
+                                  <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                                    {feedbackAnalytics.popular_future_topics.slice(0, 6).map((topic, index) => {
+                                      const percentage = (topic.count / total) * 100;
+                                      const angle = (topic.count / total) * 360;
+                                      const x1 = 50 + 45 * Math.cos((currentAngle - 90) * Math.PI / 180);
+                                      const y1 = 50 + 45 * Math.sin((currentAngle - 90) * Math.PI / 180);
+                                      const x2 = 50 + 45 * Math.cos((currentAngle + angle - 90) * Math.PI / 180);
+                                      const y2 = 50 + 45 * Math.sin((currentAngle + angle - 90) * Math.PI / 180);
+                                      
+                                      const largeArc = angle > 180 ? 1 : 0;
+                                      const pathData = `M 50 50 L ${x1} ${y1} A 45 45 0 ${largeArc} 1 ${x2} ${y2} Z`;
+                                      
+                                      const result = (
+                                        <path
+                                          key={index}
+                                          d={pathData}
+                                          fill={colors[index % colors.length]}
+                                          stroke="white"
+                                          strokeWidth="0.5"
+                                        />
+                                      );
+                                      
+                                      currentAngle += angle;
+                                      return result;
+                                    })}
+                                  </svg>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                          
+                          {/* Legend and Data */}
+                          <div className="space-y-3">
+                            {feedbackAnalytics.popular_future_topics.slice(0, 6).map((topic, index) => {
+                              const total = feedbackAnalytics.popular_future_topics.reduce((sum, t) => sum + t.count, 0);
+                              const percentage = Math.round((topic.count / total) * 100);
+                              const colors = ['#3B82F6', '#2563EB', '#1D4ED8', '#1E40AF', '#1E3A8A', '#172554'];
+                              
+                              return (
+                                <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                                  <div className="flex items-center space-x-3">
+                                    <div 
+                                      className="w-4 h-4 rounded-full" 
+                                      style={{ backgroundColor: colors[index % colors.length] }}
+                                    ></div>
+                                    <span className="font-medium text-blue-800">{topic.topic}</span>
+                                  </div>
+                                  <div className="text-sm text-blue-600">
+                                    {topic.count} votes ({percentage}%)
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Student Text Responses */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Student Text Responses</h3>
+                      <div className="space-y-6">
+                        {allFeedback && allFeedback.length > 0 ? (
+                          allFeedback.map((feedback) => (
+                            <div key={feedback.id} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                              {/* Student Header */}
+                              <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                                <div className="flex items-center space-x-3">
+                                  <div className="font-semibold text-gray-900 text-lg">
+                                    {feedback.student_id}
+                                  </div>
+                                  {feedback.students && (
+                                    <div className="text-gray-600">
+                                      ({feedback.students.full_name})
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex items-center space-x-4">
+                                  {feedback.overall_rating && (
+                                    <div className="flex items-center space-x-1">
+                                      <span className="text-sm text-gray-600">Rating:</span>
+                                      <div className="flex">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                          <span
+                                            key={star}
+                                            className={star <= feedback.overall_rating! ? 'text-yellow-400' : 'text-gray-300'}
+                                          >
+                                            ★
+                                          </span>
+                                        ))}
+                                      </div>
+                                      <span className="text-sm text-gray-600">({feedback.overall_rating}/5)</span>
+                                    </div>
+                                  )}
+                                  <div className="text-sm text-gray-500">
+                                    {new Date(feedback.created_at).toLocaleDateString()}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Semester Feedback */}
+                              {feedback.semester_feedback && (
+                                <div className="mb-4">
+                                  <h4 className="font-medium text-gray-900 mb-2">Overall Thoughts:</h4>
+                                  <div className="bg-blue-50 p-4 rounded-lg">
+                                    <p className="text-gray-800 italic">"{feedback.semester_feedback}"</p>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Topic Selections */}
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                {/* Liked Topics */}
+                                {Array.isArray(feedback.liked_topics) && feedback.liked_topics.length > 0 && (
+                                  <div>
+                                    <h4 className="font-medium text-gray-900 mb-2">Enjoyed Topics:</h4>
+                                    <div className="space-y-2">
+                                      {feedback.liked_topics.map((topic, index) => (
+                                        <div key={index} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                                          {topic}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Improvement Topics */}
+                                {Array.isArray(feedback.improvement_topics) && feedback.improvement_topics.length > 0 && (
+                                  <div>
+                                    <h4 className="font-medium text-gray-900 mb-2">Needs Improvement:</h4>
+                                    <div className="space-y-2">
+                                      {feedback.improvement_topics.map((topic, index) => (
+                                        <div key={index} className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm">
+                                          {topic}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Future Topics */}
+                                {Array.isArray(feedback.future_topics) && feedback.future_topics.length > 0 && (
+                                  <div>
+                                    <h4 className="font-medium text-gray-900 mb-2">Future Interests:</h4>
+                                    <div className="space-y-2">
+                                      {feedback.future_topics.map((topic, index) => (
+                                        <div key={index} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                                          {topic}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Additional Comments */}
+                              {feedback.additional_comments && (
+                                <div>
+                                  <h4 className="font-medium text-gray-900 mb-2">Additional Comments:</h4>
+                                  <div className="bg-gray-50 p-4 rounded-lg">
+                                    <p className="text-gray-700">{feedback.additional_comments}</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-gray-500 text-center py-12 bg-gray-50 rounded-lg">
+                            <div className="text-xl mb-2">📝</div>
+                            <div>No feedback submissions yet</div>
+                            <div className="text-sm mt-2">Students can submit feedback through the Feedback page</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

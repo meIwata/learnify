@@ -1064,6 +1064,10 @@ export interface StudentFeedback {
   additional_comments?: string;
   created_at: string;
   updated_at: string;
+  students?: {
+    student_id: string;
+    full_name: string;
+  };
 }
 
 export interface FeedbackSubmissionRequest {
@@ -1095,9 +1099,11 @@ export interface FeedbackAnalytics {
   total_responses: number;
   average_rating: number;
   rating_distribution: { [key: number]: number };
-  popular_liked_topics: { [key: string]: number };
-  popular_improvement_topics: { [key: string]: number };
-  popular_future_topics: { [key: string]: number };
+  popular_liked_topics: Array<{ topic: string; count: number }>;
+  popular_improvement_topics: Array<{ topic: string; count: number }>;
+  popular_future_topics: Array<{ topic: string; count: number }>;
+  response_rate?: number;
+  improvement_suggestions?: number;
 }
 
 export interface FeedbackAnalyticsResponse {
