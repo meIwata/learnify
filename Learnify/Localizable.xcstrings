@@ -1,7 +1,623 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "—" : {
 
+    },
+    "%lld" : {
+
+    },
+    "%lld check-ins" : {
+
+    },
+    "%lld questions" : {
+
+    },
+    "%lld Questions" : {
+
+    },
+    "%lld/%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "%lld/50" : {
+
+    },
+    "%lld/1000 characters" : {
+
+    },
+    "%lld%%" : {
+
+    },
+    "%lld%% Complete" : {
+
+    },
+    "•" : {
+
+    },
+    "• %@" : {
+
+    },
+    "• %lld check-ins" : {
+
+    },
+    "← Back to Results" : {
+
+    },
+    "✓" : {
+
+    },
+    "🎉 Check-in successful!" : {
+
+    },
+    "🎉 Thank you for sharing your thoughts!" : {
+
+    },
+    "🏆 Top Performers" : {
+
+    },
+    "5 Points" : {
+
+    },
+    "10 Minutes" : {
+
+    },
+    "Accuracy" : {
+
+    },
+    "Accuracy Score" : {
+
+    },
+    "Accuracy: %lld%%" : {
+
+    },
+    "All Rankings" : {
+
+    },
+    "All Reviews" : {
+
+    },
+    "Answer selected" : {
+
+    },
+    "App Review" : {
+
+    },
+    "App: %@" : {
+
+    },
+    "Attempt all %lld questions to unlock (%lld/%lld)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Attempt all %1$lld questions to unlock (%2$lld/%3$lld)"
+          }
+        }
+      }
+    },
+    "Attempt all %lld questions to unlock this feature (%lld/%lld completed)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Attempt all %1$lld questions to unlock this feature (%2$lld/%3$lld completed)"
+          }
+        }
+      }
+    },
+    "Attempts: %lld" : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Change" : {
+
+    },
+    "Check back later for new lessons or contact your instructor." : {
+
+    },
+    "Check In" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "簽到"
+          }
+        }
+      }
+    },
+    "Check In Now" : {
+
+    },
+    "Check-in History" : {
+
+    },
+    "Check-in Successful!" : {
+
+    },
+    "Checking In..." : {
+
+    },
+    "Choose Difficulty Level" : {
+
+    },
+    "Choose Question Type" : {
+
+    },
+    "Class Progress" : {
+
+    },
+    "Clear" : {
+
+    },
+    "Clear All Data" : {
+
+    },
+    "Complete Quiz" : {
+
+    },
+    "Correct" : {
+
+    },
+    "Correct: %lld" : {
+
+    },
+    "Daily Check-in" : {
+
+    },
+    "Dashboard" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "主頁"
+          }
+        }
+      }
+    },
+    "Description" : {
+
+    },
+    "Don't have a Student ID? Contact your instructor." : {
+
+    },
+    "Done" : {
+
+    },
+    "Edit Student Information" : {
+
+    },
+    "Enter app name (e.g., Instagram, TikTok)" : {
+
+    },
+    "Enter submission title" : {
+
+    },
+    "Enter your student ID (e.g., STUDENT2025)" : {
+
+    },
+    "Enter your Student ID to continue" : {
+
+    },
+    "Error" : {
+
+    },
+    "Error Loading Lessons" : {
+
+    },
+    "Exercise Breakdown" : {
+
+    },
+    "Explanation" : {
+
+    },
+    "File" : {
+
+    },
+    "Filter by app name..." : {
+
+    },
+    "Filter by Difficulty" : {
+
+    },
+    "Filtering by: %@" : {
+
+    },
+    "Full Name" : {
+
+    },
+    "Full Name:" : {
+
+    },
+    "Further Reading" : {
+
+    },
+    "GitHub Repository URL" : {
+
+    },
+    "Go to Settings" : {
+
+    },
+    "Great job! Here are your results:" : {
+
+    },
+    "https://github.com/username/repository" : {
+
+    },
+    "Incorrect" : {
+
+    },
+    "Joined %@" : {
+
+    },
+    "Last attempted:" : {
+
+    },
+    "Leaderboard" : {
+
+    },
+    "Learnify" : {
+
+    },
+    "Learnify Check-In" : {
+
+    },
+    "Lesson %lld" : {
+
+    },
+    "Lesson Content" : {
+
+    },
+    "Lesson Plan" : {
+
+    },
+    "Lessons" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "課程"
+          }
+        }
+      }
+    },
+    "Loading check-ins..." : {
+
+    },
+    "Loading leaderboard..." : {
+
+    },
+    "Loading lessons..." : {
+
+    },
+    "Loading question overview..." : {
+
+    },
+    "Loading quiz questions..." : {
+
+    },
+    "Loading reviews..." : {
+
+    },
+    "Loading students..." : {
+
+    },
+    "Log Out" : {
+
+    },
+    "Mobile App Name" : {
+
+    },
+    "Next Question" : {
+
+    },
+    "No Check-ins Yet" : {
+
+    },
+    "No Lessons Available" : {
+
+    },
+    "No Questions Found" : {
+
+    },
+    "No questions match the selected difficulty filter." : {
+
+    },
+    "No Reviews Found" : {
+
+    },
+    "No reviews have been submitted yet." : {
+
+    },
+    "No reviews match your filter." : {
+
+    },
+    "No Students Found" : {
+
+    },
+    "No students have joined the leaderboard yet." : {
+
+    },
+    "No students have registered yet." : {
+
+    },
+    "No Students Yet" : {
+
+    },
+    "OK" : {
+
+    },
+    "Optional description" : {
+
+    },
+    "Per correct answer" : {
+
+    },
+    "Performance" : {
+
+    },
+    "Please check in first" : {
+
+    },
+    "Please complete check-in first to set up your student information." : {
+
+    },
+    "Please select an answer" : {
+
+    },
+    "Please set your student ID in Settings before taking the quiz." : {
+
+    },
+    "Points Earned" : {
+
+    },
+    "Points: %lld" : {
+
+    },
+    "Progress" : {
+
+    },
+    "Progress Summary" : {
+
+    },
+    "pts" : {
+
+    },
+    "Question %lld" : {
+
+    },
+    "Question %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Question %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "Question Overview" : {
+
+    },
+    "Quiz Completed!" : {
+
+    },
+    "Quiz Error" : {
+
+    },
+    "Quiz Information" : {
+
+    },
+    "Quiz Review" : {
+
+    },
+    "Refresh" : {
+
+    },
+    "Remove" : {
+
+    },
+    "Required" : {
+
+    },
+    "Retry" : {
+
+    },
+    "Review" : {
+
+    },
+    "Review all questions, your answers, and explanations" : {
+
+    },
+    "Review Answers" : {
+
+    },
+    "Review Submitted!" : {
+
+    },
+    "Review your performance on all quiz questions" : {
+
+    },
+    "Save" : {
+
+    },
+    "Select Screenshot" : {
+
+    },
+    "Settings" : {
+
+    },
+    "Share your thoughts about a mobile app you've been using" : {
+
+    },
+    "Share your thoughts about this app. What do you like? What could be improved?" : {
+
+    },
+    "Show Less" : {
+
+    },
+    "Show More" : {
+
+    },
+    "Sign In" : {
+
+    },
+    "Sign Out" : {
+
+    },
+    "Start Quiz" : {
+
+    },
+    "Student Details" : {
+
+    },
+    "Student ID" : {
+
+    },
+    "Student ID must be at least 3 characters long" : {
+
+    },
+    "Student ID not found? Contact your instructor to get registered." : {
+
+    },
+    "Student ID Required" : {
+
+    },
+    "Student ID:" : {
+
+    },
+    "Student Information" : {
+
+    },
+    "Student information is automatically saved after your first check-in. You can update it here if needed." : {
+
+    },
+    "Student Information Required" : {
+
+    },
+    "Student Marks" : {
+
+    },
+    "Student Name:" : {
+
+    },
+    "Students" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "學生"
+          }
+        }
+      }
+    },
+    "Submission Status" : {
+
+    },
+    "Submission Type" : {
+
+    },
+    "Submissions" : {
+
+    },
+    "Submit" : {
+
+    },
+    "Submit Review" : {
+
+    },
+    "Submit Work" : {
+
+    },
+    "Submit work, review others, and take quizzes" : {
+
+    },
+    "Submit your daily check-in to earn points!" : {
+
+    },
+    "Submitting..." : {
+
+    },
+    "SwiftUI Knowledge Quiz" : {
+
+    },
+    "SwiftUI Quiz" : {
+
+    },
+    "Take Another Quiz" : {
+
+    },
+    "Tap to choose from Photos" : {
+
+    },
+    "Test your SwiftUI knowledge with %lld carefully crafted questions covering basics to advanced concepts." : {
+
+    },
+    "This student hasn't checked in yet." : {
+
+    },
+    "Time limit" : {
+
+    },
+    "Time Remaining" : {
+
+    },
+    "Title" : {
+
+    },
+    "Total Score" : {
+
+    },
+    "Try Again" : {
+
+    },
+    "Unknown date" : {
+
+    },
+    "Uploading..." : {
+
+    },
+    "Validating..." : {
+
+    },
+    "View Additional Resources" : {
+
+    },
+    "View All Questions" : {
+
+    },
+    "View All Questions & Results" : {
+
+    },
+    "View Current Marks" : {
+
+    },
+    "Welcome to Learnify" : {
+
+    },
+    "Welcome, %@" : {
+
+    },
+    "What you can do:" : {
+
+    },
+    "You need to complete your first check-in to submit a review. Please go to the Check In tab first." : {
+
+    },
+    "Your Quiz Statistics" : {
+
+    },
+    "Your Review" : {
+
+    }
   },
-  "version" : "1.1"
+  "version" : "1.0"
 }

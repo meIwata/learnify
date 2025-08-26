@@ -11,11 +11,11 @@ final class APIService: NSObject, URLSessionTaskDelegate {
     static let shared = APIService()
     private override init() {}
     
-    #if DEBUG
-    private let baseURL = "http://localhost:3000"
-    #else
+//    #if DEBUG
+//    private let baseURL = "http://localhost:3000"
+//    #else
     private let baseURL = "https://learnify-api.zeabur.app"
-    #endif
+//    #endif
 
     // MARK: - Check-In
     func checkIn(studentId: String, fullName: String) async throws -> CheckInResponse {

@@ -31,7 +31,7 @@ struct DashboardView: View {
                         NavigationLink(destination: CheckInView()) {
                             DashboardCard(
                                 icon: "checkmark.circle",
-                                title: "Check In",
+                                title: String(localized: "Check In"),
                                 subtitle: "Submit your daily check-in to earn points",
                                 gradient: LinearGradient(
                                     colors: [.green, .cyan],
