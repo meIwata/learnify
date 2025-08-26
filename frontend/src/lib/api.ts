@@ -18,6 +18,10 @@ export interface Student {
   created_at: string;
   updated_at: string;
   is_admin?: boolean;
+  has_midterm_project?: boolean;
+  has_final_project?: boolean;
+  midterm_project_count?: number;
+  final_project_count?: number;
 }
 
 export interface CheckInRequest {
