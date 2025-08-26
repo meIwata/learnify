@@ -14,6 +14,7 @@ import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import QuizPage from './pages/QuizPage';
 import QuestionOverviewPage from './pages/QuestionOverviewPage';
+import FeedbackPage from './pages/FeedbackPage';
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -36,6 +37,7 @@ function AppRoutes() {
           <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
           <Route path="/quiz" element={<QuizPage />} />
           <Route path="/questions" element={<QuestionOverviewPage />} />
+          <Route path="/feedback" element={<FeedbackPage />} />
           <Route path="/profile/:studentId" element={<ProfilePage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
         </Routes>

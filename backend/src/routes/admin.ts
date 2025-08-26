@@ -4,21 +4,82 @@ import { requireAdmin, AdminRequest } from '../middleware/adminAuth';
 
 const router = Router();
 
-// Get all students (admin only)
+// Get all students with project submission status (admin only)
 router.get('/students', requireAdmin, async (req, res) => {
   try {
+    // Get all students with project submission counts
     const { data: students, error } = await supabase
       .from('students')
-      .select('*')
+      .select(`
+        *,
+        midterm_projects:submissions!submissions_student_id_fkey(count),
+        final_projects:submissions!submissions_student_id_fkey(count)
+      `)
+      .eq('submissions.submission_type', 'project')
+      .eq('submissions.project_type', 'midterm')
+      .eq('submissions.project_type', 'final')
       .order('created_at', { ascending: false });
 
     if (error) {
-      throw error;
+      console.log('Complex query failed, trying simpler approach:', error);
+      
+      // Fallback: Get students and project counts separately
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('students')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (studentsError) {
+        throw studentsError;
+      }
+
+      // Get project submission status for each student
+      const studentsWithProjects = await Promise.all(
+        studentsData.map(async (student) => {
+          // Check for midterm project
+          const { data: midtermProjects } = await supabase
+            .from('submissions')
+            .select('id')
+            .eq('student_id', student.student_id)
+            .eq('submission_type', 'project')
+            .eq('project_type', 'midterm');
+
+          // Check for final project
+          const { data: finalProjects } = await supabase
+            .from('submissions')
+            .select('id')
+            .eq('student_id', student.student_id)
+            .eq('submission_type', 'project')
+            .eq('project_type', 'final');
+
+          return {
+            ...student,
+            has_midterm_project: (midtermProjects?.length || 0) > 0,
+            has_final_project: (finalProjects?.length || 0) > 0,
+            midterm_project_count: midtermProjects?.length || 0,
+            final_project_count: finalProjects?.length || 0
+          };
+        })
+      );
+
+      return res.json({
+        success: true,
+        data: studentsWithProjects
+      });
     }
+
+    // Transform the complex query result
+    const transformedStudents = students.map(student => ({
+      ...student,
+      has_midterm_project: (student.midterm_projects?.[0]?.count || 0) > 0,
+      has_final_project: (student.final_projects?.[0]?.count || 0) > 0,
+      midterm_project_count: student.midterm_projects?.[0]?.count || 0,
+      final_project_count: student.final_projects?.[0]?.count || 0
+    }));
 
     res.json({
       success: true,
-      data: students
+      data: transformedStudents
     });
   } catch (error: any) {
     console.error('Error fetching students:', error);
